@@ -1,0 +1,65 @@
+// ——————————————————————————————————————————————————
+// Shared TypeScript types for Momo
+// ——————————————————————————————————————————————————
+
+export type MemoryType = 'text' | 'photo' | 'voice' | 'video';
+
+export interface Memory {
+  id: string;
+  archive_id: string;
+  author_name: string;
+  author_email?: string | null;
+  memory_type: MemoryType;
+  text_content?: string | null;
+  media_url?: string | null;
+  duration_seconds?: number | null;
+  caption?: string | null;
+  created_at: string;
+}
+
+export interface Archive {
+  id: string;
+  home_id: string | null;
+  subject_name: string;
+  subject_dates: string | null;
+  cover_photo_url: string | null;
+  share_slug: string;
+  family_contact_email: string | null;
+  status: 'active' | 'completed' | 'archived';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArchiveWithMemories extends Archive {
+  memories: Memory[];
+}
+
+export interface FuneralHome {
+  id: string;
+  name: string;
+  owner_email: string | null;
+  subscription_tier: 'trial' | 'independent' | 'mid' | 'high_volume' | 'enterprise';
+  stripe_customer_id: string | null;
+  created_at: string;
+}
+
+export interface Staff {
+  id: string;
+  home_id: string;
+  email: string;
+  name: string | null;
+  role: 'admin' | 'director' | 'staff';
+  auth_user_id: string | null;
+  created_at: string;
+}
+
+export interface Generation {
+  id: string;
+  archive_id: string;
+  generated_by: string | null;
+  tool: 'obit_traditional' | 'obit_celebratory' | 'obit_personal' | 'eulogy' | 'slideshow' | 'thank_yous' | 'program';
+  content: string | null;
+  edited_content: string | null;
+  status: 'draft' | 'edited' | 'finalized';
+  created_at: string;
+}

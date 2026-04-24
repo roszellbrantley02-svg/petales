@@ -1,0 +1,30 @@
+// Funeral home console — /home
+// Dashboard of all active archives + create new.
+
+import { supabaseAdmin } from '@/lib/supabase';
+import ConsoleDashboardClient from './ConsoleDashboardClient';
+import type { Archive } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
+
+export default async function ConsoleDashboardPage() {
+  const admin = supabaseAdmin();
+
+  const { data: archives } = await admin
+    .from('archives')
+    .select('*, memories(id, author_name, memory_type)')
+    .order('updated_at', { ascending: false });
+
+  // Summarize each archive
+  const summarized = (archives || []).map((a: Archive & { memories?: { author_name: string; memory_type: string }[] }) => {
+    const mems = a.memories || [];
+    const contributors = new Set(mems.map(m => (m.author_name || '').toLowerCase())).size;
+    return {
+      ...a,
+      memory_count: mems.length,
+      contributor_count: contributors,
+    };
+  });
+
+  return <ConsoleDashboardClient initialArchives={summarized} />;
+}
