@@ -22,20 +22,16 @@ export async function POST(req: NextRequest) {
     // Determine which limit applies based on the file's MIME type
     const mime = file.type || 'application/octet-stream';
     let maxBytes = 0;
-    let allowedTypes: readonly string[] = [];
     let category: 'photo' | 'video' | 'voice' | null = null;
 
-    if (LIMITS.ALLOWED_PHOTO_TYPES.includes(mime)) {
+    if ((LIMITS.ALLOWED_PHOTO_TYPES as readonly string[]).includes(mime)) {
       maxBytes = LIMITS.PHOTO_MAX_BYTES;
-      allowedTypes = LIMITS.ALLOWED_PHOTO_TYPES;
       category = 'photo';
-    } else if (LIMITS.ALLOWED_VIDEO_TYPES.includes(mime)) {
+    } else if ((LIMITS.ALLOWED_VIDEO_TYPES as readonly string[]).includes(mime)) {
       maxBytes = LIMITS.VIDEO_MAX_BYTES;
-      allowedTypes = LIMITS.ALLOWED_VIDEO_TYPES;
       category = 'video';
-    } else if (LIMITS.ALLOWED_AUDIO_TYPES.includes(mime)) {
+    } else if ((LIMITS.ALLOWED_AUDIO_TYPES as readonly string[]).includes(mime)) {
       maxBytes = LIMITS.AUDIO_MAX_BYTES;
-      allowedTypes = LIMITS.ALLOWED_AUDIO_TYPES;
       category = 'voice';
     } else {
       return NextResponse.json(
