@@ -150,11 +150,11 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
     setOutputTitle(fullTitle);
     setActiveToolKey(toolKey);
 
-    // CACHE-FIRST: if we already have this tool's content in cache (from a
-    // previous click or from the initial DB fetch), show it instantly without
-    // calling Claude. Only regenerate when the director explicitly asks.
-    if (!force && cachedGenerations[tool]) {
-      setOutput(cachedGenerations[tool].content);
+    // CACHE-FIRST: if we already have this tool's content for this exact variant
+    // (tool|tradition|language) in cache, show it instantly without calling Claude.
+    // Only regenerate when the director explicitly clicks Regenerate (force=true).
+    if (!force && cachedGenerations[toolKey]) {
+      setOutput(cachedGenerations[toolKey].content);
       setGenerating(false);
       return;
     }
@@ -171,6 +171,7 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
           tool,
           tradition: tradition === 'none' ? undefined : tradition,
           language: language === 'en' ? undefined : language,
+          force: force,
         }),
       });
       if (!res.ok) {
@@ -179,10 +180,13 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
       }
       const data = await res.json();
       setOutput(data.content);
-      // Save to cache so subsequent clicks don't re-call Claude
+      // Save to cache (keyed by variant) so subsequent clicks don't re-call Claude
       setCachedGenerations((prev) => ({
         ...prev,
-        [tool]: { content: data.content, generated_at: new Date().toISOString() },
+        [toolKey]: {
+          content: data.content,
+          generated_at: data.generated_at || new Date().toISOString(),
+        },
       }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';

@@ -47,11 +47,12 @@ const VALID_TOOLS: GenerateTool[] = [
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { slug, tool, tradition, language } = body as {
+    const { slug, tool, tradition, language, force } = body as {
       slug: string;
       tool: GenerateTool;
       tradition?: Tradition;
       language?: Language;
+      force?: boolean;
     };
 
     if (!slug || !tool) {
@@ -80,6 +81,37 @@ export async function POST(req: NextRequest) {
     const archive = guard.archive;
 
     const admin = supabaseAdmin();
+
+    // ——————————————————————————————————————————————
+    // SERVER-SIDE CACHE: if a previous generation exists for this exact
+    // (archive, tool, tradition, language) combo, return it without calling
+    // Claude. The director must explicitly send `force: true` (via the
+    // Regenerate button) to bypass this and burn a fresh AI call.
+    //
+    // Cached returns don't count toward the daily rate limit since they
+    // cost nothing.
+    // ——————————————————————————————————————————————
+    if (!force) {
+      const { data: cached } = await admin
+        .from('generations')
+        .select('id, content, created_at')
+        .eq('archive_id', archive.id)
+        .eq('tool', tool)
+        .eq('tradition', tradition || 'none')
+        .eq('language', language || 'en')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cached && cached.content) {
+        return NextResponse.json({
+          content: cached.content,
+          generation_id: cached.id,
+          generated_at: cached.created_at,
+          cached: true,
+        });
+      }
+    }
 
     // ——————————————————————————————————————————————
     // LAYER 1: HARD MONTHLY CIRCUIT BREAKER
@@ -184,6 +216,8 @@ export async function POST(req: NextRequest) {
         tool,
         content,
         status: 'draft',
+        tradition: tradition || 'none',
+        language: language || 'en',
       })
       .select()
       .single();
