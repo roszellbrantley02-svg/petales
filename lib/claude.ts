@@ -39,6 +39,46 @@ export type GenerateTool =
   | 'acknowledgment_letter'
   | 'grief_resources';
 
+export type Tradition =
+  | 'none'
+  | 'catholic'
+  | 'protestant'
+  | 'jewish'
+  | 'buddhist'
+  | 'hindu'
+  | 'muslim'
+  | 'secular';
+
+export type Language =
+  | 'en'  // English
+  | 'es'  // Spanish
+  | 'fr'  // French
+  | 'pt'  // Portuguese
+  | 'zh'  // Mandarin
+  | 'de'  // German
+  | 'it'; // Italian
+
+const TRADITION_GUIDANCE: Record<Tradition, string> = {
+  none: '',
+  catholic: 'Honor Catholic customs. Use language and structure familiar to a Catholic funeral Mass when relevant — references to faith, communion of saints, eternal rest, the Mass of Christian Burial. Stay reverent, avoid sentimentality.',
+  protestant: 'Honor Protestant Christian customs. Use language familiar to a Christian memorial service — scripture references, hope of resurrection, gathering of the faithful. Stay scripture-grounded, avoid theological specificity beyond the broadly shared.',
+  jewish: 'Honor Jewish customs. Use language familiar to Jewish mourning practice — "of blessed memory" (z"l), reference to family lineage, the importance of the family\'s shared remembrance. Respect Jewish tradition that emphasizes the deceased\'s impact on the living. Avoid Christian framings of afterlife.',
+  buddhist: 'Honor Buddhist customs. Use language reflecting impermanence, the journey of consciousness, gratitude for the life shared, and the merit transferred through remembrance. Calm, contemplative tone.',
+  hindu: 'Honor Hindu customs. Reflect the soul\'s onward journey (atman), the cycle of life, family duty (dharma) in remembrance. Reverent and culturally attuned.',
+  muslim: 'Honor Islamic customs. Use respectful Islamic language where appropriate — reference to Allah\'s mercy, the deceased returning to their Creator, the brevity of life. Avoid imagery from other faiths. Often includes "Inna lillahi wa inna ilayhi raji\'un" (To Allah we belong and to Him we return) where appropriate.',
+  secular: 'Honor secular humanist values. No religious language. Focus on the deceased\'s impact on the people they loved, the gifts they leave in others, the continuity of memory through community rather than spiritual continuation. Warm, grounded, fully present.',
+};
+
+const LANGUAGE_NAMES: Record<Language, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  pt: 'Portuguese',
+  zh: 'Mandarin Chinese',
+  de: 'German',
+  it: 'Italian',
+};
+
 // ——————————————————————————————————————————————————
 // System prompt — applies to every generation
 // ——————————————————————————————————————————————————
@@ -158,14 +198,37 @@ const TOOL_INSTRUCTIONS: Record<GenerateTool, string> = {
 // Main generate function
 // ——————————————————————————————————————————————————
 
+export interface GenerateOptions {
+  tradition?: Tradition;
+  language?: Language;
+}
+
 export async function generateFromArchive(
   archive: ArchiveWithMemories,
-  tool: GenerateTool
+  tool: GenerateTool,
+  options: GenerateOptions = {}
 ): Promise<string> {
-  const familyContext = formatMemoriesForPrompt(archive);
-  const instruction = TOOL_INSTRUCTIONS[tool];
+  const tradition = options.tradition && options.tradition !== 'none' ? options.tradition : null;
+  const language = options.language && options.language !== 'en' ? options.language : null;
 
-  const userMessage = `${instruction}\n\n${familyContext}`;
+  const familyContext = formatMemoriesForPrompt(archive);
+  const baseInstruction = TOOL_INSTRUCTIONS[tool];
+
+  const modifiers: string[] = [];
+
+  if (tradition) {
+    modifiers.push(`Tradition: ${TRADITION_GUIDANCE[tradition]}`);
+  }
+
+  if (language) {
+    modifiers.push(`Language: Write the entire output in ${LANGUAGE_NAMES[language]}. Use natural, native-quality phrasing — not literal translation. If the family's contributions are in another language, translate them faithfully into ${LANGUAGE_NAMES[language]} while preserving each contributor's voice. Keep proper nouns (names, places) as written.`);
+  }
+
+  const fullInstruction = modifiers.length > 0
+    ? `${baseInstruction}\n\n${modifiers.join('\n\n')}`
+    : baseInstruction;
+
+  const userMessage = `${fullInstruction}\n\n${familyContext}`;
 
   const response = await claude.messages.create({
     model: DEFAULT_MODEL,

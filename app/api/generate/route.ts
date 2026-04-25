@@ -11,8 +11,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generateFromArchive, GenerateTool } from '@/lib/claude';
+import { generateFromArchive, GenerateTool, Tradition, Language } from '@/lib/claude';
 import { LIMITS } from '@/lib/limits';
+
+const VALID_TRADITIONS: Tradition[] = [
+  'none', 'catholic', 'protestant', 'jewish', 'buddhist', 'hindu', 'muslim', 'secular',
+];
+const VALID_LANGUAGES: Language[] = ['en', 'es', 'fr', 'pt', 'zh', 'de', 'it'];
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -40,7 +45,12 @@ const VALID_TOOLS: GenerateTool[] = [
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { slug, tool } = body as { slug: string; tool: GenerateTool };
+    const { slug, tool, tradition, language } = body as {
+      slug: string;
+      tool: GenerateTool;
+      tradition?: Tradition;
+      language?: Language;
+    };
 
     if (!slug || !tool) {
       return NextResponse.json(
@@ -50,6 +60,12 @@ export async function POST(req: NextRequest) {
     }
     if (!VALID_TOOLS.includes(tool)) {
       return NextResponse.json({ error: 'Invalid tool' }, { status: 400 });
+    }
+    if (tradition && !VALID_TRADITIONS.includes(tradition)) {
+      return NextResponse.json({ error: 'Invalid tradition' }, { status: 400 });
+    }
+    if (language && !VALID_LANGUAGES.includes(language)) {
+      return NextResponse.json({ error: 'Invalid language' }, { status: 400 });
     }
 
     const admin = supabaseAdmin();
@@ -157,7 +173,10 @@ export async function POST(req: NextRequest) {
       memories,
     };
 
-    const content = await generateFromArchive(archiveWithMemories, tool);
+    const content = await generateFromArchive(archiveWithMemories, tool, {
+      tradition,
+      language,
+    });
 
     // Log the generation (also serves as the rate-limit counter)
     const { data: gen } = await admin

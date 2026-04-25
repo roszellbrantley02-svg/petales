@@ -18,6 +18,39 @@ type GenerateTool =
   | 'acknowledgment_letter'
   | 'grief_resources';
 
+type Tradition =
+  | 'none'
+  | 'catholic'
+  | 'protestant'
+  | 'jewish'
+  | 'buddhist'
+  | 'hindu'
+  | 'muslim'
+  | 'secular';
+
+type Language = 'en' | 'es' | 'fr' | 'pt' | 'zh' | 'de' | 'it';
+
+const TRADITION_OPTIONS: { value: Tradition; label: string }[] = [
+  { value: 'none', label: 'No specific tradition' },
+  { value: 'catholic', label: 'Catholic' },
+  { value: 'protestant', label: 'Protestant Christian' },
+  { value: 'jewish', label: 'Jewish' },
+  { value: 'buddhist', label: 'Buddhist' },
+  { value: 'hindu', label: 'Hindu' },
+  { value: 'muslim', label: 'Muslim' },
+  { value: 'secular', label: 'Secular humanist' },
+];
+
+const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'zh', label: 'Mandarin' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+];
+
 const TOOL_META: Record<GenerateTool, { title: string; sub: string }> = {
   obit_traditional: { title: 'Obituary — Traditional', sub: 'For newspapers and formal printing' },
   obit_celebratory: { title: 'Obituary — Celebratory', sub: 'Warmer tone, for memorial websites' },
@@ -64,6 +97,8 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
   const [outputTitle, setOutputTitle] = useState<string>('');
   const [generating, setGenerating] = useState<boolean>(false);
   const [copyBanner, setCopyBanner] = useState<boolean>(false);
+  const [tradition, setTradition] = useState<Tradition>('none');
+  const [language, setLanguage] = useState<Language>('en');
 
   const initial = (archive.subject_name || '?').charAt(0).toUpperCase();
   const contributors = new Set(memories.map(m => (m.author_name || '').toLowerCase())).size;
@@ -78,12 +113,30 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
   async function generate(tool: GenerateTool) {
     setGenerating(true);
     setOutput('');
-    setOutputTitle(TOOL_META[tool].title);
+
+    // Build a richer title that reflects tradition + language
+    const traditionLabel = tradition !== 'none'
+      ? TRADITION_OPTIONS.find(t => t.value === tradition)?.label
+      : null;
+    const languageLabel = language !== 'en'
+      ? LANGUAGE_OPTIONS.find(l => l.value === language)?.label
+      : null;
+    const modifiers = [traditionLabel, languageLabel].filter(Boolean).join(' · ');
+    const fullTitle = modifiers
+      ? `${TOOL_META[tool].title} (${modifiers})`
+      : TOOL_META[tool].title;
+    setOutputTitle(fullTitle);
+
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: archive.share_slug, tool }),
+        body: JSON.stringify({
+          slug: archive.share_slug,
+          tool,
+          tradition: tradition === 'none' ? undefined : tradition,
+          language: language === 'en' ? undefined : language,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -192,6 +245,45 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
 
         {/* Generate */}
         <div className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Generate</div>
+
+        {/* Tradition + language selectors — apply to next click */}
+        <div className="bg-white border border-line rounded-xl p-4 mb-4 grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Tradition</label>
+            <select
+              value={tradition}
+              onChange={e => setTradition(e.target.value as Tradition)}
+              disabled={generating}
+              className="w-full border border-line bg-cream rounded-lg px-3 py-2 text-sm focus:border-sage focus:bg-white focus:outline-none disabled:opacity-60"
+            >
+              {TRADITION_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Language</label>
+            <select
+              value={language}
+              onChange={e => setLanguage(e.target.value as Language)}
+              disabled={generating}
+              className="w-full border border-line bg-cream rounded-lg px-3 py-2 text-sm focus:border-sage focus:bg-white focus:outline-none disabled:opacity-60"
+            >
+              {LANGUAGE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          {(tradition !== 'none' || language !== 'en') && (
+            <div className="md:col-span-2 text-xs text-subtle italic">
+              Selected: {[
+                tradition !== 'none' && TRADITION_OPTIONS.find(t => t.value === tradition)?.label,
+                language !== 'en' && LANGUAGE_OPTIONS.find(l => l.value === language)?.label,
+              ].filter(Boolean).join(' · ')} — applies to your next generation. Click any button below.
+            </div>
+          )}
+        </div>
+
         <div className="space-y-5 mb-5">
           {TOOL_GROUPS.map(group => (
             <div key={group.label}>
