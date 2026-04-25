@@ -236,7 +236,7 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
           </span>
         </div>
         <a href="/home" className="text-muted text-sm hover:text-ink">← All families</a>
-        <a href={`/home/${archive.share_slug}/program`} className="text-muted text-sm hover:text-ink no-print">Print memorial program →</a>
+        <a href={`/home/${archive.share_slug}/print`} className="text-muted text-sm hover:text-ink no-print">Print materials →</a>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
