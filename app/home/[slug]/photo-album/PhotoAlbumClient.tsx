@@ -1,6 +1,7 @@
 'use client';
 
 import type { Archive, Memory } from '@/lib/types';
+import PrintShopActions, { ArtifactType } from '../PrintShopActions';
 
 interface Props {
   archive: Archive;
@@ -167,6 +168,8 @@ export default function PhotoAlbumClient({ archive, photos }: Props) {
           }
         }
       `}</style>
-    </div>
+    
+      <PrintShopActions artifactType={"photo-album" as ArtifactType} decedentName={archive.subject_name} />
+      </div>
   );
 }

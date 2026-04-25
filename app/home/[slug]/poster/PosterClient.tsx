@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { Archive, Memory } from '@/lib/types';
+import PrintShopActions, { ArtifactType } from '../PrintShopActions';
 
 interface Props {
   archive: Archive;
@@ -210,6 +211,8 @@ export default function PosterClient({ archive, memories }: Props) {
           }
         }
       `}</style>
-    </div>
+    
+      <PrintShopActions artifactType={"poster" as ArtifactType} decedentName={archive.subject_name} />
+      </div>
   );
 }

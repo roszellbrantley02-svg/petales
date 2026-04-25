@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import type { Archive } from '@/lib/types';
+import PrintShopActions, { ArtifactType } from '../PrintShopActions';
 
 interface Props {
   archive: Archive;
@@ -463,6 +464,8 @@ export default function ProgramClient({ archive, homeName, latest }: Props) {
           @page { size: letter; margin: 0; }
         }
       `}</style>
-    </div>
+    
+      <PrintShopActions artifactType={"program" as ArtifactType} decedentName={archive.subject_name} />
+      </div>
   );
 }

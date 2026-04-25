@@ -69,6 +69,10 @@ export interface FuneralHome {
   subscription_tier: 'trial' | 'independent' | 'mid' | 'high_volume' | 'enterprise';
   stripe_customer_id: string | null;
   created_at: string;
+
+  print_supplier_name?: string | null;
+  print_supplier_email?: string | null;
+  print_supplier_notes?: string | null;
 }
 
 export interface Staff {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Archive } from '@/lib/types';
+import PrintShopActions, { ArtifactType } from '../PrintShopActions';
 
 interface Props {
   archive: Archive;
@@ -243,6 +244,8 @@ export default function PrayerCardClient({ archive }: Props) {
           }
         }
       `}</style>
-    </div>
+    
+      <PrintShopActions artifactType={"prayer-card" as ArtifactType} decedentName={archive.subject_name} />
+      </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import type { Archive } from '@/lib/types';
+import PrintShopActions, { ArtifactType } from '../PrintShopActions';
 
 interface Props {
   archive: Archive;
@@ -126,6 +127,8 @@ export default function QRCardsClient({ archive, qrDataUrl, familyUrl }: Props) 
           }
         }
       `}</style>
-    </div>
+    
+      <PrintShopActions artifactType={"qr-cards" as ArtifactType} decedentName={archive.subject_name} />
+      </div>
   );
 }

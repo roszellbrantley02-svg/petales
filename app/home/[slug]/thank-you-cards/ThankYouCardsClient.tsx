@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Archive } from '@/lib/types';
+import PrintShopActions, { ArtifactType } from '../PrintShopActions';
 
 interface Contributor {
   name: string;
@@ -209,6 +210,8 @@ export default function ThankYouCardsClient({ archive, contributors }: Props) {
           }
         }
       `}</style>
-    </div>
+    
+      <PrintShopActions artifactType={"thank-you-cards" as ArtifactType} decedentName={archive.subject_name} />
+      </div>
   );
 }
