@@ -41,6 +41,7 @@ create table if not exists archives (
   donation_charity_name text,
   donation_url text,
   donation_note text,
+  theme text default 'cream',
   status text check (status in ('active','completed','archived')) default 'active',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -153,6 +154,28 @@ create table if not exists announcement_deliveries (
 
 create index if not exists idx_deliveries_announcement on announcement_deliveries(announcement_id);
 create index if not exists idx_deliveries_status on announcement_deliveries(delivery_status);
+
+-- ——— Wall notes (short messages family leave) ———
+create table if not exists wall_notes (
+  id uuid primary key default uuid_generate_v4(),
+  archive_id uuid references archives(id) on delete cascade,
+  author_name text,
+  message text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_wall_notes_archive on wall_notes(archive_id, created_at desc);
+
+-- ——— Candles (one click = one candle lit) ———
+create table if not exists candles (
+  id uuid primary key default uuid_generate_v4(),
+  archive_id uuid references archives(id) on delete cascade,
+  lit_by text,
+  dedication text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_candles_archive on candles(archive_id, created_at desc);
 
 -- ——— Marketplace clicks ———
 create table if not exists marketplace_clicks (

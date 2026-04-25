@@ -28,9 +28,26 @@ export interface Archive {
   donation_charity_name: string | null;
   donation_url: string | null;
   donation_note: string | null;
+  theme: string;
   status: 'active' | 'completed' | 'archived';
   created_at: string;
   updated_at: string;
+}
+
+export interface WallNote {
+  id: string;
+  archive_id: string;
+  author_name: string | null;
+  message: string;
+  created_at: string;
+}
+
+export interface Candle {
+  id: string;
+  archive_id: string;
+  lit_by: string | null;
+  dedication: string | null;
+  created_at: string;
 }
 
 export interface ArchiveWithMemories extends Archive {

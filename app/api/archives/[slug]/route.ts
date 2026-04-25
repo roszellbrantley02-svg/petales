@@ -47,6 +47,7 @@ export async function PATCH(
     const allowed = [
       'subject_name', 'subject_dates', 'cover_photo_url', 'status',
       'family_contact_email', 'donation_charity_name', 'donation_url', 'donation_note',
+      'theme',
     ];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {

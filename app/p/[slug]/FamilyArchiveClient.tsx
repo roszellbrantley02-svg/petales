@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import type { Archive, Memory, MemoryType } from '@/lib/types';
 import { LIMITS, fileMaxFor, allowedTypesFor, bytesToReadable } from '@/lib/limits';
+import { themeToStyle, type ThemeId } from '@/lib/themes';
 import HonorSection from './HonorSection';
+import WallSection from './WallSection';
+import CandleSection from './CandleSection';
+import ThemePicker from './ThemePicker';
 
 interface Props {
   archive: Archive;
@@ -20,6 +24,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   const [caption, setCaption] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [theme, setTheme] = useState<ThemeId>((archive.theme as ThemeId) || 'cream');
 
   const initial = (archive.subject_name || 'M').charAt(0).toUpperCase();
 
@@ -132,6 +137,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   }
 
   return (
+    <div style={themeToStyle(theme)} className="min-h-screen">
     <div className="max-w-2xl mx-auto px-6 pt-12 pb-32">
       {/* Cover */}
       <div className="text-center pt-12 pb-14 border-b border-line mb-12">
@@ -297,6 +303,16 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
         </div>
       )}
 
+      <CandleSection
+        archiveSlug={archive.share_slug}
+        subjectName={archive.subject_name}
+      />
+
+      <WallSection
+        archiveSlug={archive.share_slug}
+        subjectName={archive.subject_name}
+      />
+
       <HonorSection
         archiveSlug={archive.share_slug}
         subjectName={archive.subject_name}
@@ -309,6 +325,13 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
         <p className="serif italic text-base text-muted mb-2">A quiet place to gather what matters.</p>
         <p>Kept for generations.</p>
       </footer>
+    </div>
+
+    <ThemePicker
+      archiveSlug={archive.share_slug}
+      currentTheme={theme}
+      onThemeChange={setTheme}
+    />
     </div>
   );
 }

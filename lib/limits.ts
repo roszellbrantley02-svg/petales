@@ -47,6 +47,13 @@ export const LIMITS = {
   ANNOUNCEMENTS_PER_MONTH_HARD_CAP: 200,
   EMAILS_PER_MONTH_HARD_CAP: 2_000,  // Resend free tier is 3,000/mo
 
+  // ——— Wall + Candles ———
+  WALL_NOTE_MAX_CHARS: 280,
+  WALL_AUTHOR_MAX_CHARS: 80,
+  WALL_NOTES_PER_ARCHIVE_MAX: 10_000,
+  CANDLE_DEDICATION_MAX_CHARS: 140,
+  CANDLES_PER_ARCHIVE_MAX: 100_000,
+
   // ——— Allowed MIME types ———
   ALLOWED_PHOTO_TYPES: [
     'image/jpeg',
