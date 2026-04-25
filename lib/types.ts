@@ -73,6 +73,9 @@ export interface FuneralHome {
   print_supplier_name?: string | null;
   print_supplier_email?: string | null;
   print_supplier_notes?: string | null;
+  logo_url?: string | null;
+  brand_color?: string | null;
+  tagline?: string | null;
 }
 
 export interface Staff {

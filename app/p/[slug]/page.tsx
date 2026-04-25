@@ -24,6 +24,26 @@ export default async function FamilyArchivePage({
     notFound();
   }
 
+  // Pull funeral home branding (logo, color, tagline) so the family page
+  // shows the home's brand alongside Petales — they get more visibility
+  // than we do, which is intentional.
+  let homeBranding: { name: string; logo_url: string | null; brand_color: string | null; tagline: string | null } | null = null;
+  if (archive.home_id) {
+    const { data: home } = await admin
+      .from('funeral_homes')
+      .select('name, logo_url, brand_color, tagline')
+      .eq('id', archive.home_id)
+      .single();
+    if (home) {
+      homeBranding = {
+        name: home.name,
+        logo_url: home.logo_url || null,
+        brand_color: home.brand_color || null,
+        tagline: home.tagline || null,
+      };
+    }
+  }
+
   const { data: memories } = await admin
     .from('memories')
     .select('*')
@@ -34,6 +54,7 @@ export default async function FamilyArchivePage({
     <FamilyArchiveClient
       archive={archive as Archive}
       initialMemories={(memories || []) as Memory[]}
+      homeBranding={homeBranding}
     />
   );
 }

@@ -13,7 +13,7 @@ export async function GET() {
     const admin = supabaseAdmin();
     const { data } = await admin
       .from('funeral_homes')
-      .select('name, print_supplier_name, print_supplier_email, print_supplier_notes')
+      .select('name, print_supplier_name, print_supplier_email, print_supplier_notes, logo_url, brand_color, tagline')
       .eq('id', authed.home.id)
       .single();
 
@@ -22,6 +22,9 @@ export async function GET() {
       print_supplier_name: data?.print_supplier_name || null,
       print_supplier_email: data?.print_supplier_email || null,
       print_supplier_notes: data?.print_supplier_notes || null,
+      logo_url: data?.logo_url || null,
+      brand_color: data?.brand_color || null,
+      tagline: data?.tagline || null,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

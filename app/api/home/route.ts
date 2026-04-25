@@ -18,6 +18,9 @@ export async function PATCH(req: NextRequest) {
       'print_supplier_name',
       'print_supplier_email',
       'print_supplier_notes',
+      'logo_url',
+      'brand_color',
+      'tagline',
     ];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {

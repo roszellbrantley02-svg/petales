@@ -13,12 +13,20 @@ import PWAInstallPrompt from './PWAInstallPrompt';
 import { compressImage } from '@/lib/image-compression';
 import { uploadWithProgress } from '@/lib/upload-with-progress';
 
+interface HomeBranding {
+  name: string;
+  logo_url: string | null;
+  brand_color: string | null;
+  tagline: string | null;
+}
+
 interface Props {
   archive: Archive;
   initialMemories: Memory[];
+  homeBranding?: HomeBranding | null;
 }
 
-export default function FamilyArchiveClient({ archive, initialMemories }: Props) {
+export default function FamilyArchiveClient({ archive, initialMemories, homeBranding }: Props) {
   const [memories, setMemories] = useState<Memory[]>(initialMemories);
   const [formOpen, setFormOpen] = useState(false);
   const [formType, setFormType] = useState<MemoryType>('text');
@@ -428,7 +436,26 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
         donationNote={archive.donation_note}
       />
 
-      <footer className="mt-20 pt-10 border-t border-line text-center text-xs text-subtle">
+      <footer
+        className="mt-20 pt-10 border-t border-line text-center text-xs text-subtle"
+        style={homeBranding?.brand_color ? { ['--brand-accent' as string]: homeBranding.brand_color } : undefined}
+      >
+        {homeBranding && (
+          <div className="mb-6">
+            {homeBranding.logo_url && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={homeBranding.logo_url}
+                alt={homeBranding.name}
+                className="max-h-16 mx-auto mb-3 object-contain"
+              />
+            )}
+            <p className="serif text-base text-ink mb-1">In care of {homeBranding.name}</p>
+            {homeBranding.tagline && (
+              <p className="serif italic text-xs text-muted">{homeBranding.tagline}</p>
+            )}
+          </div>
+        )}
         {(archive as { package_price_label?: string | null }).package_price_label && (
           <p className="serif italic text-sm text-muted mb-3">
             {(archive as { package_price_label?: string | null }).package_price_label} &mdash; included with your service.
