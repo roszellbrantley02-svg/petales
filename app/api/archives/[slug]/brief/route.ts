@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireOwnedArchiveBySlug } from '@/lib/auth';
-import { generateFromArchive } from '@/lib/claude';
+import { generateFromArchive, LowCreditError } from '@/lib/claude';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -178,6 +178,15 @@ export async function POST(
       regenerated: true,
     });
   } catch (err: unknown) {
+    if (err instanceof LowCreditError) {
+      return NextResponse.json(
+        {
+          error: 'The director brief can\u2019t be generated right now \u2014 AI service is temporarily unavailable. Please contact your administrator.',
+          code: 'AI_CREDITS_EXHAUSTED',
+        },
+        { status: 503 }
+      );
+    }
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[brief POST] error:', err);
     return NextResponse.json({ error: message }, { status: 500 });

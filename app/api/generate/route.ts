@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generateFromArchive, GenerateTool, Tradition, Language } from '@/lib/claude';
+import { generateFromArchive, GenerateTool, Tradition, Language, LowCreditError } from '@/lib/claude';
 import { LIMITS } from '@/lib/limits';
 import { requireOwnedArchiveBySlug } from '@/lib/auth';
 
@@ -201,6 +201,15 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
+    if (err instanceof LowCreditError) {
+      return NextResponse.json(
+        {
+          error: 'AI generation is temporarily unavailable. Please contact your administrator to add credits.',
+          code: 'AI_CREDITS_EXHAUSTED',
+        },
+        { status: 503 }
+      );
+    }
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('Generate error:', err);
     return NextResponse.json({ error: message }, { status: 500 });

@@ -15,6 +15,48 @@ if (!ANTHROPIC_API_KEY) {
 export const claude = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
+export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+
+// Tools that don't need Sonnet's full capability — use Haiku (~5x cheaper, fast enough).
+// Obituaries, eulogies, and programs stay on Sonnet for quality.
+const HAIKU_TOOLS: Set<string> = new Set([
+  'director_brief',
+  'grief_resources',
+]);
+
+function modelForTool(tool: string): string {
+  return HAIKU_TOOLS.has(tool) ? HAIKU_MODEL : DEFAULT_MODEL;
+}
+
+/**
+ * Thrown when the Anthropic API rejects a call because the account is out of
+ * credits. API routes catch this and return a calm 503 with a user-facing
+ * message instead of leaking the raw billing error.
+ */
+export class LowCreditError extends Error {
+  constructor(message = 'AI generation is temporarily unavailable. Please contact your administrator.') {
+    super(message);
+    this.name = 'LowCreditError';
+  }
+}
+
+/**
+ * Detects whether an error from the Anthropic SDK is a low-credit billing error.
+ * The SDK throws an APIError with status 400 and a message containing
+ * "credit balance" when the account is out of credits.
+ */
+export function isLowCreditError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('credit balance') ||
+    lower.includes('credit_balance') ||
+    lower.includes('low_credit') ||
+    lower.includes('insufficient_credits') ||
+    lower.includes('billing')
+  );
+}
 
 // ——————————————————————————————————————————————————
 // Tool catalog — every "click a button" generation in the console
@@ -260,12 +302,20 @@ export async function generateFromArchive(
 
   const userMessage = `${fullInstruction}\n\n${familyContext}`;
 
-  const response = await claude.messages.create({
-    model: DEFAULT_MODEL,
-    max_tokens: LIMITS.GENERATION_MAX_OUTPUT_TOKENS,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: userMessage }],
-  });
+  let response;
+  try {
+    response = await claude.messages.create({
+      model: modelForTool(tool),
+      max_tokens: LIMITS.GENERATION_MAX_OUTPUT_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+  } catch (err) {
+    if (isLowCreditError(err)) {
+      throw new LowCreditError();
+    }
+    throw err;
+  }
 
   const text = response.content
     .filter(block => block.type === 'text')
