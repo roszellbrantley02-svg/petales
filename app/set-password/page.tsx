@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import SetPasswordClient from './SetPasswordClient';
 
 export const metadata = {
@@ -5,5 +6,9 @@ export const metadata = {
 };
 
 export default function SetPasswordPage() {
-  return <SetPasswordClient />;
+  return (
+    <Suspense fallback={null}>
+      <SetPasswordClient />
+    </Suspense>
+  );
 }
