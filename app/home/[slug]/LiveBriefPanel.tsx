@@ -34,6 +34,35 @@ interface Props {
 
 const POLL_INTERVAL_MS = 30_000; // 30s — feels real-time enough, costs nothing
 
+// Pull the "WORTH ASKING IN THE CONFERENCE" section out of the brief so we can
+// render it as a separate, more prominent callout. Returns [] if not found.
+function extractWorthAsking(brief: string | null): string[] {
+  if (!brief) return [];
+  const lines = brief.split('\n');
+  const startIdx = lines.findIndex((l) => l.trim().toUpperCase().startsWith('WORTH ASKING'));
+  if (startIdx === -1) return [];
+  const items: string[] = [];
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      // blank line — skip but don't end the section yet
+      continue;
+    }
+    // Detect next ALL-CAPS heading to stop
+    if (trimmed === trimmed.toUpperCase() && trimmed.length > 4 && /^[A-Z][A-Z\s'’]+$/.test(trimmed)) {
+      break;
+    }
+    if (/^[-•*]\s+/.test(trimmed)) {
+      items.push(trimmed.replace(/^[-•*]\s+/, ''));
+    } else if (items.length > 0) {
+      // continuation of previous bullet
+      items[items.length - 1] += ' ' + trimmed;
+    }
+  }
+  return items.filter(Boolean);
+}
+
 export default function LiveBriefPanel({ archive }: Props) {
   const [data, setData] = useState<BriefData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,6 +227,22 @@ export default function LiveBriefPanel({ archive }: Props) {
           </article>
         )}
       </div>
+
+      {/* What might be worth asking — extracted from the brief, surfaced as a separate callout */}
+      {!loading && !error && data && data.brief && extractWorthAsking(data.brief).length > 0 && (
+        <div className="mt-10 bg-warm/40 border border-line rounded-2xl p-6 no-print-block">
+          <h3 className="text-xs uppercase tracking-widest text-muted mb-3">
+            What might be worth asking the family
+          </h3>
+          <ul className="space-y-2.5">
+            {extractWorthAsking(data.brief).map((item, idx) => (
+              <li key={idx} className="serif text-ink text-base leading-snug pl-4 border-l-2 border-accent">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Refresh / print controls */}
       {!loading && !error && data && data.brief && (

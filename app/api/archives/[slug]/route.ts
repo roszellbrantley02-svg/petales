@@ -56,6 +56,10 @@ export async function PATCH(
       'subject_name', 'subject_dates', 'cover_photo_url', 'status',
       'family_contact_email', 'donation_charity_name', 'donation_url', 'donation_note',
       'theme',
+      // Cremation memorial SKU
+      'service_type', 'package_price_cents', 'package_price_label',
+      // Physician nudge
+      'physician_name', 'physician_email',
     ];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {

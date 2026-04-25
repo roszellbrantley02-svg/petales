@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import LiveBriefPanel from './LiveBriefPanel';
+import ArchiveSettingsPanel from './ArchiveSettingsPanel';
 import type { Archive, Memory } from '@/lib/types';
 import VendorSection from './VendorSection';
 import BroadcastSection from './BroadcastSection';
@@ -191,6 +192,7 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
   return (
     <>
       <LiveBriefPanel archive={archive} />
+      <ArchiveSettingsPanel archive={archive} />
       <div className="min-h-screen bg-[#f5f3ed]">
       {/* Top bar */}
       <div className="bg-white border-b border-line px-6 py-4 flex justify-between items-center">

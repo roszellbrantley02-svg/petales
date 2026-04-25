@@ -326,3 +326,74 @@ export async function sendPasswordReset(data: PasswordResetEmailData) {
     text: renderPasswordResetText(data),
   });
 }
+
+// ——————————————————————————————————————————————————
+// Physician cause-of-death reminder email
+// ——————————————————————————————————————————————————
+
+export interface PhysicianReminderEmailData {
+  physicianName: string | null;
+  physicianEmail: string;
+  decedentName: string;
+  homeName: string;
+}
+
+export function renderPhysicianReminderHtml(data: PhysicianReminderEmailData): string {
+  const greeting = data.physicianName ? `Dr. ${escapeHtml(data.physicianName)},` : 'Dear Doctor,';
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Cause of death certification needed</title></head>
+<body style="margin: 0; padding: 0; background: #faf8f4; font-family: Georgia, 'Times New Roman', serif; color: #2a2623;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #faf8f4; padding: 40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background: #ffffff; border-radius: 12px; padding: 40px 32px;">
+        <tr><td>
+          <p style="margin: 0 0 16px; line-height: 1.65; font-size: 16px;">${greeting}</p>
+
+          <p style="margin: 0 0 16px; line-height: 1.65; font-size: 16px;">
+            <strong style="color: #2a2623;">${escapeHtml(data.decedentName)}</strong> recently died in your care. ${escapeHtml(data.homeName)} is preparing to file the death certificate and needs your cause-of-death certification to complete it.
+          </p>
+
+          <p style="margin: 0 0 16px; line-height: 1.65; font-size: 16px;">
+            Please log into your state&rsquo;s Electronic Death Registration System (EDRS) and certify the cause of death at your earliest convenience. The family is unable to access banking, insurance, and end-of-life affairs until the certificate is filed.
+          </p>
+
+          <p style="margin: 0 0 16px; line-height: 1.65; font-size: 16px;">
+            Thank you for your prompt attention to this. If you have questions, please reply directly to this email or contact ${escapeHtml(data.homeName)}.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e8e2d6; margin: 28px 0;">
+
+          <p style="margin: 0; line-height: 1.55; font-size: 12px; color: #a89e92; font-style: italic;">
+            This message was sent on behalf of ${escapeHtml(data.homeName)} via Petales.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+export function renderPhysicianReminderText(data: PhysicianReminderEmailData): string {
+  const greeting = data.physicianName ? `Dr. ${data.physicianName},` : 'Dear Doctor,';
+  return `${greeting}
+
+${data.decedentName} recently died in your care. ${data.homeName} is preparing to file the death certificate and needs your cause-of-death certification to complete it.
+
+Please log into your state's Electronic Death Registration System (EDRS) and certify the cause of death at your earliest convenience. The family is unable to access banking, insurance, and end-of-life affairs until the certificate is filed.
+
+Thank you for your prompt attention to this. If you have questions, please reply directly to this email or contact ${data.homeName}.
+
+This message was sent on behalf of ${data.homeName} via Petales.
+`;
+}
+
+export async function sendPhysicianReminder(data: PhysicianReminderEmailData) {
+  const resend = getResend();
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.physicianEmail,
+    subject: `Cause of death certification needed for ${data.decedentName}`,
+    html: renderPhysicianReminderHtml(data),
+    text: renderPhysicianReminderText(data),
+  });
+}

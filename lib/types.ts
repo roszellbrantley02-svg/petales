@@ -31,6 +31,13 @@ export interface Archive {
   donation_note: string | null;
   theme: string;
   status: 'active' | 'completed' | 'archived';
+  service_type?: 'traditional' | 'cremation' | 'direct_cremation' | 'memorial_only' | null;
+  package_price_cents?: number | null;
+  package_price_label?: string | null;
+  physician_name?: string | null;
+  physician_email?: string | null;
+  physician_reminded_at?: string | null;
+  physician_reminded_count?: number | null;
   created_at: string;
   updated_at: string;
 }

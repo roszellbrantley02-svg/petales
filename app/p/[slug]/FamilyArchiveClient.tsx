@@ -379,6 +379,11 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
       />
 
       <footer className="mt-20 pt-10 border-t border-line text-center text-xs text-subtle">
+        {(archive as { package_price_label?: string | null }).package_price_label && (
+          <p className="serif italic text-sm text-muted mb-3">
+            {(archive as { package_price_label?: string | null }).package_price_label} &mdash; included with your service.
+          </p>
+        )}
         <p className="serif italic text-base text-muted mb-2">A quiet place to gather what matters.</p>
         <p>Kept for generations.</p>
         <p className="mt-6">
