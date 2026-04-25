@@ -8,6 +8,10 @@ import HonorSection from './HonorSection';
 import WallSection from './WallSection';
 import CandleSection from './CandleSection';
 import ThemePicker from './ThemePicker';
+import VoiceRecorder from './VoiceRecorder';
+import PWAInstallPrompt from './PWAInstallPrompt';
+import { compressImage } from '@/lib/image-compression';
+import { uploadWithProgress } from '@/lib/upload-with-progress';
 
 interface Props {
   archive: Archive;
@@ -24,6 +28,8 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   const [caption, setCaption] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
+  const [uploadStage, setUploadStage] = useState<string>('');
   const [isLastWords, setIsLastWords] = useState(false);
   const [theme, setTheme] = useState<ThemeId>((archive.theme as ThemeId) || 'cream');
 
@@ -39,6 +45,8 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   }
 
   function closeForm() {
+    setUploadPct(0);
+    setUploadStage('');
     setFormOpen(false);
     setAuthorName('');
     setAuthorEmail('');
@@ -96,17 +104,23 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
       let mediaUrl: string | null = null;
 
       if (mediaFile && (formType === 'photo' || formType === 'video' || formType === 'voice')) {
+        let toUpload: File = mediaFile;
+        if (formType === 'photo') {
+          setUploadStage('Compressing photo…');
+          toUpload = await compressImage(mediaFile);
+        }
+        setUploadStage('Uploading…');
+        setUploadPct(0);
         const fd = new FormData();
-        fd.append('file', mediaFile);
+        fd.append('file', toUpload);
         fd.append('slug', archive.share_slug);
         fd.append('memory_type', formType);
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json();
-          throw new Error(err.error || 'Upload failed');
+        const result = await uploadWithProgress('/api/upload', fd, (pct) => setUploadPct(pct));
+        if (!result.ok) {
+          throw new Error(result.error || 'Upload failed');
         }
-        const uploadData = await uploadRes.json();
-        mediaUrl = uploadData.url;
+        mediaUrl = (result.data as { url?: string })?.url || null;
+        setUploadStage('Saving…');
       }
 
       const res = await fetch('/api/memories', {
@@ -141,7 +155,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   }
 
   return (
-    <div style={themeToStyle(theme)} className="min-h-screen">
+    <div style={themeToStyle(theme)} className="min-h-screen [min-height:100dvh]">
     <div className="max-w-2xl mx-auto px-6 pt-12 pb-32">
       {/* Cover */}
       <div className="text-center pt-12 pb-14 border-b border-line mb-12">
@@ -242,18 +256,36 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
             </div>
           )}
 
+          {formType === 'voice' && !mediaFile && (
+            <div className="mb-4">
+              <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-2">
+                Record now
+              </label>
+              <VoiceRecorder
+                disabled={uploading}
+                onRecorded={(file) => {
+                  setMediaFile(file);
+                }}
+              />
+              <p className="text-xs text-subtle italic mt-3 text-center">
+                Or upload an existing recording &darr;
+              </p>
+            </div>
+          )}
+
           {(formType === 'photo' || formType === 'video' || formType === 'voice') && (
             <div className="mb-4">
               <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-2">
                 {formType === 'photo' && 'Photo'}
                 {formType === 'video' && 'Video'}
-                {formType === 'voice' && 'Audio recording'}
+                {formType === 'voice' && (mediaFile ? 'Your recording' : 'Or choose an existing audio file')}
               </label>
-              <label className="block border-2 border-dashed border-line rounded-lg py-6 text-center text-muted cursor-pointer hover:border-accent hover:bg-warm transition-colors">
-                {mediaFile ? `${mediaFile.name} — click to change` : 'Click to choose a file'}
+              <label className="block border-2 border-dashed border-line rounded-lg py-8 text-center text-muted cursor-pointer hover:border-accent hover:bg-warm transition-colors min-h-[88px]">
+                {mediaFile ? `${mediaFile.name} — tap to change` : (formType === 'photo' ? 'Tap to take a photo or choose one' : formType === 'video' ? 'Tap to record a video or choose one' : 'Tap to choose an audio file')}
                 <input
                   type="file"
                   accept={formType === 'photo' ? 'image/*' : formType === 'video' ? 'video/*' : 'audio/*'}
+                  capture={formType === 'photo' ? 'environment' : formType === 'video' ? 'environment' : undefined}
                   onChange={e => setMediaFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
@@ -295,20 +327,38 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
             </label>
           </div>
 
-          <div className="flex gap-3 mt-5">
-            <button
-              onClick={handleSubmit}
-              disabled={uploading}
-              className="px-5 py-3 rounded-lg bg-ink text-white font-medium hover:bg-accent-dark disabled:bg-subtle disabled:cursor-not-allowed transition-colors"
-            >
-              {uploading ? 'Saving…' : 'Save memory'}
-            </button>
+          {uploading && uploadStage && (
+            <div className="mt-4 mb-2 bg-warm/40 border border-line rounded-lg p-3">
+              <div className="flex justify-between items-center text-xs text-muted mb-2">
+                <span>{uploadStage}</span>
+                {uploadPct > 0 && uploadStage === 'Uploading…' && <span>{uploadPct}%</span>}
+              </div>
+              {uploadStage === 'Uploading…' && (
+                <div className="w-full bg-cream rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-accent h-full transition-all duration-200"
+                    style={{ width: `${uploadPct}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sticky submit row — stays in view above mobile keyboard */}
+          <div className="sticky bottom-0 -mx-7 px-7 pt-4 pb-5 mt-5 bg-white border-t border-line flex gap-3">
             <button
               onClick={closeForm}
               disabled={uploading}
-              className="px-5 py-3 rounded-lg text-muted hover:text-ink font-medium transition-colors"
+              className="px-5 py-3 rounded-lg text-muted hover:text-ink font-medium transition-colors min-h-[48px]"
             >
               Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={uploading}
+              className="flex-1 px-5 py-3 rounded-lg bg-ink text-white font-medium hover:bg-accent-dark disabled:bg-subtle disabled:cursor-not-allowed transition-colors min-h-[48px]"
+            >
+              {uploading ? 'Saving…' : 'Save memory'}
             </button>
           </div>
         </div>
@@ -406,6 +456,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
       currentTheme={theme}
       onThemeChange={setTheme}
     />
+    <PWAInstallPrompt />
     </div>
   );
 }
