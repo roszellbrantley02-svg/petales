@@ -28,6 +28,10 @@ export default function StaffPageClient({
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
+  const [inviteLink, setInviteLink] = useState('');
+  const [inviteEmailSent, setInviteEmailSent] = useState(false);
+  const [inviteRecipient, setInviteRecipient] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
   const [inviteRole, setInviteRole] = useState<'staff' | 'director' | 'admin'>('staff');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -61,12 +65,15 @@ export default function StaffPageClient({
       setInviteName('');
       setInviteEmail('');
       setInviteRole('staff');
-      setInviteSuccess(newStaff.message || newStaff.warning || `Invitation email sent to ${inviteEmail.trim()}.`);
-      // Keep the modal open briefly so the admin sees confirmation, then close it.
-      setTimeout(() => {
-        setInviteOpen(false);
-        setInviteSuccess('');
-      }, 4000);
+      setInviteLink(newStaff.inviteLink || '');
+      setInviteEmailSent(!!newStaff.emailSent);
+      setInviteRecipient(newStaff.recipientEmail || inviteEmail.trim());
+      setLinkCopied(false);
+      setInviteSuccess(
+        newStaff.emailSent
+          ? `Invitation email sent to ${newStaff.recipientEmail || inviteEmail.trim()}. Their link is also shown below in case it doesn\u2019t arrive.`
+          : `Account created. The invitation email could not be sent automatically \u2014 copy the link below and send it to them yourself.`
+      );
       router.refresh();
     } catch (err: unknown) {
       const m = err instanceof Error ? err.message : 'Unknown error';
@@ -229,19 +236,55 @@ export default function StaffPageClient({
               )}
 
               {inviteSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg p-3 mb-4">
+                <div className={`text-sm rounded-lg p-3 mb-4 ${inviteEmailSent ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
                   {inviteSuccess}
+                </div>
+              )}
+
+              {inviteLink && (
+                <div className="bg-cream border border-line rounded-lg p-3 mb-4">
+                  <div className="text-xs uppercase tracking-wider text-muted mb-1.5">
+                    Invitation link {inviteRecipient ? `for ${inviteRecipient}` : ''}
+                  </div>
+                  <div className="text-xs break-all bg-white border border-line rounded p-2 text-ink mb-2 font-mono">
+                    {inviteLink}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(inviteLink);
+                        setLinkCopied(true);
+                        setTimeout(() => setLinkCopied(false), 2000);
+                      } catch {
+                        // Fallback: select the text in the box
+                        alert('Copy this link manually: ' + inviteLink);
+                      }
+                    }}
+                    className="text-xs uppercase tracking-wider text-accent hover:text-accent-dark font-medium"
+                  >
+                    {linkCopied ? '\u2713 Copied' : 'Copy link'}
+                  </button>
+                  <p className="text-xs text-subtle italic mt-2 leading-relaxed">
+                    The link expires in 24 hours. The new staff member clicks it to set their password and sign in.
+                  </p>
                 </div>
               )}
 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setInviteOpen(false)}
+                  onClick={() => {
+                    setInviteOpen(false);
+                    setInviteSuccess('');
+                    setInviteLink('');
+                    setInviteEmailSent(false);
+                    setInviteRecipient('');
+                  }}
                   disabled={submitting}
                   className="text-muted hover:text-ink px-4 py-2 font-medium text-sm"
                 >
-                  Cancel
+                  {inviteLink ? 'Done' : 'Cancel'}
                 </button>
                 <button
                   type="submit"

@@ -99,9 +99,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 4. Send the invitation email via Resend
+    // 4. Try to send the invitation email via Resend.
+    // Whether it succeeds or fails, we ALWAYS return the link so the admin
+    // can copy it and send manually if needed (e.g. Resend test domain
+    // limitation, no custom domain yet, etc.).
+    let emailSent = false;
+    let emailError: string | null = null;
     try {
-      await sendStaffInvite({
+      const result = await sendStaffInvite({
         recipientName: name ? String(name).trim() : null,
         recipientEmail: cleanEmail,
         homeName: authed.home.name,
@@ -109,19 +114,25 @@ export async function POST(req: NextRequest) {
         inviteLink: linkData.properties.action_link,
         role,
       });
+      // Resend returns { data, error } — error is non-null if the send failed
+      if (result?.error) {
+        emailError = result.error.message || 'Resend rejected the send';
+        console.warn('[invite-staff] Resend rejected send:', result.error);
+      } else {
+        emailSent = true;
+      }
     } catch (emailErr) {
       console.error('[invite-staff] Failed to send invite email:', emailErr);
-      // Don't fail the request — staff is created and admin can re-invite if needed.
-      return NextResponse.json({
-        ...staff,
-        warning: 'Staff added, but the invitation email failed to send. Check your Resend setup, or send them this link manually: ' + linkData.properties.action_link,
-      });
+      emailError = emailErr instanceof Error ? emailErr.message : 'Unknown email error';
     }
 
     return NextResponse.json({
       ...staff,
       invited: true,
-      message: `Invitation email sent to ${cleanEmail}.`,
+      emailSent,
+      emailError,
+      inviteLink: linkData.properties.action_link,
+      recipientEmail: cleanEmail,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
