@@ -84,6 +84,42 @@ create table if not exists generations (
 
 create index idx_generations_archive on generations(archive_id, created_at desc);
 
+-- ——— Vendors (florist, clergy, caterer, etc) ———
+create table if not exists vendors (
+  id uuid primary key default uuid_generate_v4(),
+  archive_id uuid references archives(id) on delete cascade,
+  vendor_type text check (vendor_type in (
+    'florist','clergy','musician','caterer','transportation',
+    'cemetery','photographer','reception_venue','pallbearer','other'
+  )) not null,
+  name text not null,
+  contact_email text,
+  contact_phone text,
+  status text check (status in (
+    'not_contacted','contacted','confirmed','completed','cancelled'
+  )) default 'not_contacted',
+  notes text,
+  needed_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_vendors_archive on vendors(archive_id);
+create index if not exists idx_vendors_status on vendors(status);
+
+create or replace function touch_vendor_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists vendors_updated_at on vendors;
+create trigger vendors_updated_at
+  before update on vendors
+  for each row execute function touch_vendor_updated_at();
+
 -- ——— Audit log ———
 create table if not exists audit_log (
   id uuid primary key default uuid_generate_v4(),
@@ -134,6 +170,16 @@ alter table staff enable row level security;
 alter table archives enable row level security;
 alter table memories enable row level security;
 alter table generations enable row level security;
+alter table vendors enable row level security;
+
+create policy "Staff can manage their archive's vendors" on vendors
+  for all using (
+    archive_id in (
+      select a.id from archives a
+      join staff s on s.home_id = a.home_id
+      where s.auth_user_id = auth.uid()
+    )
+  );
 
 -- Staff can read their own home's data
 create policy "Staff can read their home" on funeral_homes

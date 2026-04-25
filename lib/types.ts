@@ -80,3 +80,36 @@ export interface Generation {
   status: 'draft' | 'edited' | 'finalized';
   created_at: string;
 }
+
+export type VendorType =
+  | 'florist'
+  | 'clergy'
+  | 'musician'
+  | 'caterer'
+  | 'transportation'
+  | 'cemetery'
+  | 'photographer'
+  | 'reception_venue'
+  | 'pallbearer'
+  | 'other';
+
+export type VendorStatus =
+  | 'not_contacted'
+  | 'contacted'
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled';
+
+export interface Vendor {
+  id: string;
+  archive_id: string;
+  vendor_type: VendorType;
+  name: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  status: VendorStatus;
+  notes: string | null;
+  needed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

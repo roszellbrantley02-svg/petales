@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Archive, Memory } from '@/lib/types';
+import VendorSection from './VendorSection';
 
 type GenerateTool =
   | 'obit_traditional'
@@ -243,8 +244,15 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
           )}
         </div>
 
+        {/* Vendor coordination */}
+        <VendorSection
+          archiveSlug={archive.share_slug}
+          subjectName={archive.subject_name}
+          subjectDates={archive.subject_dates}
+        />
+
         {/* Generate */}
-        <div className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Generate</div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-muted mt-7 mb-3">Generate</div>
 
         {/* Tradition + language selectors — apply to next click */}
         <div className="bg-white border border-line rounded-xl p-4 mb-4 grid md:grid-cols-2 gap-4">
