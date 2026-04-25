@@ -109,6 +109,11 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
   const [cachedGenerations, setCachedGenerations] = useState<Record<string, { content: string; generated_at: string }>>({});
   const [activeToolKey, setActiveToolKey] = useState<string>('');
   const [generating, setGenerating] = useState<boolean>(false);
+  const [aiDraft, setAiDraft] = useState<string>('');
+  const [editedFinal, setEditedFinal] = useState<string>('');
+  const [activeGenerationId, setActiveGenerationId] = useState<string>('');
+  const [savingFinal, setSavingFinal] = useState<boolean>(false);
+  const [finalSavedAt, setFinalSavedAt] = useState<string>('');
   const [copyBanner, setCopyBanner] = useState<boolean>(false);
   const [tradition, setTradition] = useState<Tradition>('none');
   const [language, setLanguage] = useState<Language>('en');
@@ -154,7 +159,12 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
     // (tool|tradition|language) in cache, show it instantly without calling Claude.
     // Only regenerate when the director explicitly clicks Regenerate (force=true).
     if (!force && cachedGenerations[toolKey]) {
-      setOutput(cachedGenerations[toolKey].content);
+      const cached = cachedGenerations[toolKey] as { content: string; generated_at: string; id?: string; edited_content?: string | null; status?: string };
+      setAiDraft(cached.content);
+      setEditedFinal(cached.edited_content || cached.content);
+      setOutput(cached.edited_content || cached.content);
+      setActiveGenerationId(cached.id || '');
+      setFinalSavedAt(cached.edited_content ? cached.generated_at : '');
       setGenerating(false);
       return;
     }
@@ -180,12 +190,19 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
       }
       const data = await res.json();
       setOutput(data.content);
+      setAiDraft(data.content);
+      setEditedFinal(data.content); // start the editable side as a copy of the AI
+      setActiveGenerationId(data.generation_id || '');
+      setFinalSavedAt('');
       // Save to cache (keyed by variant) so subsequent clicks don't re-call Claude
       setCachedGenerations((prev) => ({
         ...prev,
         [toolKey]: {
           content: data.content,
           generated_at: data.generated_at || new Date().toISOString(),
+          id: data.generation_id,
+          edited_content: null,
+          status: 'draft',
         },
       }));
     } catch (err: unknown) {
@@ -194,6 +211,44 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
     } finally {
       setGenerating(false);
     }
+  }
+
+  async function saveFinal() {
+    if (!activeGenerationId) {
+      alert('No generation selected. Click a tool button first.');
+      return;
+    }
+    setSavingFinal(true);
+    try {
+      const res = await fetch(`/api/generations/${activeGenerationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ edited_content: editedFinal, status: 'finalized' }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Save failed');
+      const now = new Date().toISOString();
+      setFinalSavedAt(now);
+      // Update cache so this is reflected next time
+      const tool = activeToolKey.split('|')[0];
+      setCachedGenerations((prev) => ({
+        ...prev,
+        [activeToolKey]: {
+          ...prev[activeToolKey],
+          edited_content: editedFinal,
+          status: 'finalized',
+        } as typeof prev[string],
+      }));
+      void tool;
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSavingFinal(false);
+    }
+  }
+
+  function copyAiToFinal() {
+    setEditedFinal(aiDraft);
   }
 
   function copy() {
@@ -236,6 +291,7 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
           </span>
         </div>
         <a href="/home" className="text-muted text-sm hover:text-ink">← All families</a>
+        <a href={`/home/${archive.share_slug}/finals`} className="text-muted text-sm hover:text-ink no-print">What's done →</a>
         <a href={`/home/${archive.share_slug}/print`} className="text-muted text-sm hover:text-ink no-print">Print materials →</a>
       </div>
 
@@ -371,28 +427,34 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
           ))}
         </div>
 
-        {/* Output */}
-        {(output || generating) && (
+        {/* Output — AI draft on the left, your final on the right */}
+        {(aiDraft || generating) && (
           <div className="bg-white border border-line rounded-xl p-6 mt-5">
             <div className="flex justify-between items-center mb-4 pb-4 border-b border-line flex-wrap gap-3">
               <div className="serif text-xl font-medium">{outputTitle}</div>
-              {output && !generating && (
+              {aiDraft && !generating && (
                 <div className="flex gap-2 items-center">
-                  {copyBanner && <span className="text-xs text-sage">Copied</span>}
+                  {copyBanner && <span className="text-xs text-accent">Copied</span>}
+                  {finalSavedAt && (
+                    <span className="text-xs text-accent italic">
+                      Final saved · {new Date(finalSavedAt).toLocaleString()}
+                    </span>
+                  )}
+                  {activeToolKey && (
+                    <button
+                      onClick={() => {
+                        const tool = activeToolKey.split('|')[0] as GenerateTool;
+                        if (confirm('Regenerate this with Claude? Each regeneration uses AI credits.')) {
+                          generate(tool, true);
+                        }
+                      }}
+                      className="text-xs uppercase tracking-wider text-muted hover:text-ink px-2 py-1"
+                    >
+                      ↻ Regenerate
+                    </button>
+                  )}
                   <button
-                    onClick={copy}
-                    className="border border-line px-3 py-1.5 rounded-lg text-xs font-medium hover:border-sage hover:text-sage transition-colors"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    onClick={download}
-                    className="border border-line px-3 py-1.5 rounded-lg text-xs font-medium hover:border-sage hover:text-sage transition-colors"
-                  >
-                    Download
-                  </button>
-                  <button
-                    onClick={() => { setOutput(''); setOutputTitle(''); }}
+                    onClick={() => { setAiDraft(''); setEditedFinal(''); setOutput(''); setOutputTitle(''); setActiveGenerationId(''); setFinalSavedAt(''); }}
                     className="text-muted hover:text-ink px-3 py-1.5 text-xs transition-colors"
                   >
                     Close
@@ -400,35 +462,71 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
                 </div>
               )}
             </div>
+
             {generating ? (
               <div className="py-10 text-center text-muted">
                 <div className="serif italic text-lg mb-2">Gathering the family&apos;s words…</div>
                 <div className="text-xs">Claude is reading every contribution and weaving a draft.</div>
               </div>
             ) : (
-              <textarea
-                value={output}
-                onChange={e => setOutput(e.target.value)}
-                className="w-full min-h-[320px] border border-line rounded-lg p-5 serif text-base leading-relaxed bg-[#fefdf9] focus:border-sage focus:outline-none resize-y"
-              />
+              <div className="grid lg:grid-cols-2 gap-5">
+                {/* AI draft (read-only) */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs uppercase tracking-wider text-muted font-semibold">
+                      AI draft
+                    </h4>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(aiDraft); }}
+                      className="text-xs text-muted hover:text-ink px-2"
+                      title="Copy AI draft"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="min-h-[320px] border border-line rounded-lg p-4 serif text-base leading-relaxed bg-cream whitespace-pre-wrap text-muted">
+                    {aiDraft}
+                  </div>
+                  <p className="text-xs text-subtle italic mt-2">
+                    Drafted by Claude from the family&apos;s contributions.
+                  </p>
+                </div>
+
+                {/* Editable final */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs uppercase tracking-wider text-ink font-semibold">
+                      Your final {finalSavedAt && <span className="text-accent normal-case font-normal italic ml-1">· saved</span>}
+                    </h4>
+                    <button
+                      onClick={copyAiToFinal}
+                      className="text-xs text-muted hover:text-ink px-2"
+                      title="Copy AI draft into the editable side"
+                    >
+                      ↩ Use AI as starting point
+                    </button>
+                  </div>
+                  <textarea
+                    value={editedFinal}
+                    onChange={(e) => { setEditedFinal(e.target.value); setFinalSavedAt(''); }}
+                    className="w-full min-h-[320px] border-2 border-accent/40 rounded-lg p-4 serif text-base leading-relaxed bg-white focus:border-accent focus:outline-none resize-y"
+                    placeholder="This is your version. Edit, rewrite, copy parts of the AI draft on the left — make it sound like your home."
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-subtle italic">
+                      Saved finals are used in the printable program, prayer cards, and other artifacts.
+                    </p>
+                    <button
+                      onClick={saveFinal}
+                      disabled={savingFinal || !editedFinal.trim()}
+                      className="bg-ink text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-dark disabled:bg-subtle disabled:cursor-not-allowed"
+                    >
+                      {savingFinal ? 'Saving…' : '💾 Save as final'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
-                          {!generating && activeToolKey && (
-                <button
-                  onClick={() => {
-                    // Find the tool from the toolKey
-                    const tool = activeToolKey.split('|')[0] as GenerateTool;
-                    if (confirm('Regenerate this with Claude? Each regeneration uses AI credits.')) {
-                      generate(tool, true);
-                    }
-                  }}
-                  className="text-xs uppercase tracking-wider text-muted hover:text-ink mb-3"
-                >
-                  ↻ Regenerate
-                </button>
-              )}
-<p className="text-xs text-subtle mt-3 italic">
-              Drafted by Claude from the family&apos;s own contributions. Always review and edit before finalizing.
-            </p>
           </div>
         )}
       </div>

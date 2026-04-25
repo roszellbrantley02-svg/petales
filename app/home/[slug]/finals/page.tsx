@@ -1,13 +1,13 @@
 import { redirect, notFound } from 'next/navigation';
 import { getAuthedStaff } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
-import ProgramClient from './ProgramClient';
+import FinalsClient from './FinalsClient';
 import type { Archive } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Memorial program · Petales' };
+export const metadata = { title: 'Finals · Petales' };
 
-export default async function ProgramPage({
+export default async function FinalsPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -17,39 +17,35 @@ export default async function ProgramPage({
   if (!authed) redirect('/signin');
 
   const admin = supabaseAdmin();
-
-  // Load the archive (must belong to the staff's home)
   const { data: archive } = await admin
     .from('archives')
     .select('*')
     .eq('share_slug', slug)
     .single();
-
   if (!archive) notFound();
   if (archive.home_id !== authed.home.id) notFound();
 
-  // Load all generations and pick the most recent of each tool.
-  // Prefer the director's edited/finalized version when present — that's the
-  // signed-off content meant for downstream artifacts.
+  // Pull all generations that have an edited_content (these are the "finals")
   const { data: gens } = await admin
     .from('generations')
-    .select('tool, content, edited_content, created_at, tradition, language')
+    .select('id, tool, content, edited_content, status, created_at, tradition, language')
     .eq('archive_id', archive.id)
+    .not('edited_content', 'is', null)
     .order('created_at', { ascending: false });
 
-  const latest: Record<string, string> = {};
-  for (const g of gens || []) {
-    if (!latest[g.tool]) {
-      const text = g.edited_content || g.content;
-      if (text) latest[g.tool] = text;
-    }
-  }
-
   return (
-    <ProgramClient
+    <FinalsClient
       archive={archive as Archive}
-      homeName={authed.home.name}
-      latest={latest}
+      finals={(gens || []) as Array<{
+        id: string;
+        tool: string;
+        content: string | null;
+        edited_content: string;
+        status: string;
+        created_at: string;
+        tradition: string | null;
+        language: string | null;
+      }>}
     />
   );
 }

@@ -25,21 +25,30 @@ export async function GET(req: NextRequest) {
     // Include tradition + language so the cache key per variant is preserved.
     const { data, error } = await admin
       .from('generations')
-      .select('id, tool, tradition, language, content, created_at')
+      .select('id, tool, tradition, language, content, edited_content, status, created_at')
       .eq('archive_id', archive.id)
       .order('created_at', { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     // Group by (tool|tradition|language) — keep only the most recent for each variant.
-    // The client uses this key shape to look up cached content per tool variant.
-    const latestByKey: Record<string, { id: string; content: string; generated_at: string }> = {};
+    // Include edited_content + status so the client knows whether a director has
+    // already saved a final version.
+    const latestByKey: Record<string, {
+      id: string;
+      content: string;
+      edited_content: string | null;
+      status: string;
+      generated_at: string;
+    }> = {};
     for (const row of data || []) {
       const key = `${row.tool}|${row.tradition || 'none'}|${row.language || 'en'}`;
       if (!latestByKey[key]) {
         latestByKey[key] = {
           id: row.id,
           content: row.content,
+          edited_content: row.edited_content || null,
+          status: row.status || 'draft',
           generated_at: row.created_at,
         };
       }
