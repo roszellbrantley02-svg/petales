@@ -1,8 +1,11 @@
 // GET  /api/archives/[slug] — fetch one archive with its memories (by share_slug)
+//                              PUBLIC: families share this URL with relatives.
 // PATCH /api/archives/[slug] — update the archive (subject info, cover photo)
+//                              STAFF-ONLY: enforces ownership of the archive.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireOwnedArchiveBySlug } from '@/lib/auth';
 
 export async function GET(
   _req: NextRequest,
@@ -43,6 +46,11 @@ export async function PATCH(
 ) {
   try {
     const { slug } = await params;
+
+    // STAFF-ONLY: must own this archive
+    const guard = await requireOwnedArchiveBySlug(slug);
+    if (guard.response) return guard.response;
+
     const body = await req.json();
     const allowed = [
       'subject_name', 'subject_dates', 'cover_photo_url', 'status',
@@ -58,7 +66,7 @@ export async function PATCH(
     const { data, error } = await admin
       .from('archives')
       .update(updates)
-      .eq('share_slug', slug)
+      .eq('id', guard.archive.id)
       .select()
       .single();
 

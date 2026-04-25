@@ -1,7 +1,10 @@
 // GET    /api/announcements?slug=xxx           — list past announcements + recipient suggestions
+//                                                  STAFF-ONLY: exposes contributor emails.
 // POST   /api/announcements                     — send a new announcement to recipients
+//                                                  STAFF-ONLY: sends real emails on the home's behalf.
 //
 // Layered cost/abuse protection (matches /api/generate pattern):
+//   0. TENANT OWNERSHIP
 //   1. HARD CAP — announcements per month
 //   2. HARD CAP — emails per month (catches "many small announcements" abuse)
 //   3. Global daily announcement cap
@@ -12,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { LIMITS } from '@/lib/limits';
 import { getResend, FROM_EMAIL, renderAnnouncementHtml, renderAnnouncementText } from '@/lib/resend';
+import { requireOwnedArchiveBySlug } from '@/lib/auth';
 import type { AnnouncementRecipient } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -24,16 +28,12 @@ export async function GET(req: NextRequest) {
     const slug = searchParams.get('slug');
     if (!slug) return NextResponse.json({ error: 'slug is required' }, { status: 400 });
 
-    const admin = supabaseAdmin();
+    // STAFF-ONLY: must own this archive (exposes contributor emails)
+    const guard = await requireOwnedArchiveBySlug(slug);
+    if (guard.response) return guard.response;
+    const archive = guard.archive;
 
-    const { data: archive, error: aErr } = await admin
-      .from('archives')
-      .select('id')
-      .eq('share_slug', slug)
-      .single();
-    if (aErr || !archive) {
-      return NextResponse.json({ error: 'Archive not found' }, { status: 404 });
-    }
+    const admin = supabaseAdmin();
 
     // Past announcements
     const { data: announcements } = await admin
@@ -96,6 +96,10 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(recipients) || recipients.length === 0) {
       return NextResponse.json({ error: 'At least one recipient is required' }, { status: 400 });
     }
+
+    // STAFF-ONLY: must own this archive (sends real email + spends rate-limit budget)
+    const ownGuard = await requireOwnedArchiveBySlug(slug);
+    if (ownGuard.response) return ownGuard.response;
 
     if (subject.length > LIMITS.ANNOUNCEMENT_SUBJECT_MAX_CHARS) {
       return NextResponse.json(
@@ -177,15 +181,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Lookup archive
-    const { data: archive, error: aErr } = await admin
-      .from('archives')
-      .select('*')
-      .eq('share_slug', slug)
-      .single();
-    if (aErr || !archive) {
-      return NextResponse.json({ error: 'Archive not found' }, { status: 404 });
-    }
+    // Reuse the archive verified by the ownership guard above.
+    const archive = ownGuard.archive;
 
     // Per-archive daily cap
     const { count: archiveDayCount } = await admin
@@ -222,13 +219,11 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://petales.canopytrove.com';
     const archiveUrl = `${appUrl}/p/${slug}`;
 
-    // Get the Resend client (will throw a friendly error if no API key)
     let resend;
     try {
       resend = getResend();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Resend not configured';
-      // Mark the announcement as failed so the UI shows it
       await admin
         .from('announcements')
         .update({ status: 'failed', failed_count: validatedRecipients.length })
@@ -310,12 +305,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Bulk insert delivery records
     if (deliveryRecords.length > 0) {
       await admin.from('announcement_deliveries').insert(deliveryRecords);
     }
 
-    // Update announcement with final status
     const finalStatus = failed === 0 ? 'sent' : (delivered === 0 ? 'failed' : 'sent');
     await admin
       .from('announcements')

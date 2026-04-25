@@ -1,10 +1,13 @@
 // POST   /api/memories — add a new memory to an archive (by share_slug)
+//                          PUBLIC: family contributors add memories (no login).
 // DELETE /api/memories?id=xxx — remove one
+//                          STAFF-ONLY: enforces ownership of the parent archive.
 // Enforces text length, name length, and per-archive count caps.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { LIMITS } from '@/lib/limits';
+import { requireOwnedChildById } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,22 +67,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (caption && String(caption).length > LIMITS.CAPTION_MAX_CHARS) {
-      return NextResponse.json(
-        {
-          error: `Caption is too long (${String(caption).length} characters; max ${LIMITS.CAPTION_MAX_CHARS}).`,
-        },
-        { status: 400 }
-      );
-    }
-
-    if (memory_type !== 'text' && !media_url) {
-      return NextResponse.json(
-        { error: 'media_url is required for photo, voice, and video memories.' },
-        { status: 400 }
-      );
-    }
-
     // ——— Lookup archive ———
     const admin = supabaseAdmin();
     const { data: archive, error: archiveErr } = await admin
@@ -136,6 +123,10 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
+    // STAFF-ONLY: verify the memory's archive belongs to the signed-in staff's home
+    const guard = await requireOwnedChildById('memories', id);
+    if (guard.response) return guard.response;
 
     const admin = supabaseAdmin();
     const { error } = await admin.from('memories').delete().eq('id', id);

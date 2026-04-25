@@ -1,10 +1,11 @@
-// GET    /api/wall?slug=xxx     — list wall notes for an archive
-// POST   /api/wall                — leave a new note
-// DELETE /api/wall?id=xxx        — remove a note (staff only via UI)
+// GET    /api/wall?slug=xxx     — list wall notes for an archive (PUBLIC: family page)
+// POST   /api/wall                — leave a new note (PUBLIC: visitors, no login)
+// DELETE /api/wall?id=xxx        — remove a note (STAFF-ONLY: enforces archive ownership)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { LIMITS } from '@/lib/limits';
+import { requireOwnedChildById } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -114,6 +115,10 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
+    // STAFF-ONLY: verify the note's archive belongs to the signed-in staff's home
+    const guard = await requireOwnedChildById('wall_notes', id);
+    if (guard.response) return guard.response;
 
     const admin = supabaseAdmin();
     const { error } = await admin.from('wall_notes').delete().eq('id', id);

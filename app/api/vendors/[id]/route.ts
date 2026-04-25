@@ -1,7 +1,9 @@
 // PATCH /api/vendors/[id] — update a vendor (status, contact info, notes)
+// STAFF-ONLY: enforces ownership of the vendor's parent archive.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireOwnedChildById } from '@/lib/auth';
 import type { VendorStatus } from '@/lib/types';
 
 const VALID_STATUSES: VendorStatus[] = [
@@ -14,6 +16,11 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    // STAFF-ONLY: verify the vendor's archive belongs to the signed-in staff's home
+    const guard = await requireOwnedChildById('vendors', id);
+    if (guard.response) return guard.response;
+
     const body = await req.json();
 
     const allowed = ['name', 'contact_email', 'contact_phone', 'status', 'notes', 'needed_at'];

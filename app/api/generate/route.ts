@@ -1,18 +1,18 @@
 // POST /api/generate — call Claude to produce an obituary, eulogy, etc.
+//                       STAFF-ONLY: enforces ownership of the target archive.
 //
 // Layered cost/abuse protection:
+//   0. TENANT OWNERSHIP — must own the archive before any DB or AI work
 //   1. HARD CAP — generations per calendar month across the entire system
 //      (hard circuit breaker; nothing gets past this except editing limits.ts)
 //   2. Global daily cap — generations per 24h across all archives
 //   3. Per-archive daily cap — generations per 24h for one family
-//
-// All counts are queried from the `generations` table at request time,
-// so they survive server restarts and scale with multiple instances.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateFromArchive, GenerateTool, Tradition, Language } from '@/lib/claude';
 import { LIMITS } from '@/lib/limits';
+import { requireOwnedArchiveBySlug } from '@/lib/auth';
 
 const VALID_TRADITIONS: Tradition[] = [
   'none', 'catholic', 'protestant', 'jewish', 'buddhist', 'hindu', 'muslim', 'secular',
@@ -68,13 +68,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid language' }, { status: 400 });
     }
 
+    // ——————————————————————————————————————————————
+    // LAYER 0: TENANT OWNERSHIP — must come before any DB or AI work.
+    // Refuses cross-home access AND blocks unauthenticated callers from
+    // ever reaching the (expensive) Claude generation path.
+    // ——————————————————————————————————————————————
+    const guard = await requireOwnedArchiveBySlug(slug);
+    if (guard.response) return guard.response;
+    const archive = guard.archive;
+
     const admin = supabaseAdmin();
 
     // ——————————————————————————————————————————————
     // LAYER 1: HARD MONTHLY CIRCUIT BREAKER
-    // This is the kill switch. If this trips, no more generation
-    // happens anywhere on the system until next month or the cap
-    // is raised in lib/limits.ts.
     // ——————————————————————————————————————————————
     const startOfMonth = new Date();
     startOfMonth.setUTCDate(1);
@@ -123,16 +129,6 @@ export async function POST(req: NextRequest) {
     // ——————————————————————————————————————————————
     // LAYER 3: PER-ARCHIVE DAILY CAP
     // ——————————————————————————————————————————————
-    const { data: archive, error: archiveErr } = await admin
-      .from('archives')
-      .select('*')
-      .eq('share_slug', slug)
-      .single();
-
-    if (archiveErr || !archive) {
-      return NextResponse.json({ error: 'Archive not found' }, { status: 404 });
-    }
-
     const { count: archiveDayCount } = await admin
       .from('generations')
       .select('id', { count: 'exact', head: true })

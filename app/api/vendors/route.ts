@@ -1,9 +1,11 @@
 // GET    /api/vendors?slug=xxx — list vendors for an archive (by share_slug)
 // POST   /api/vendors            — create a new vendor
 // DELETE /api/vendors?id=xxx     — remove a vendor
+// All STAFF-ONLY: vendor coordination is internal to the funeral home.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireOwnedArchiveBySlug, requireOwnedChildById } from '@/lib/auth';
 import type { VendorType, VendorStatus } from '@/lib/types';
 
 const VALID_VENDOR_TYPES: VendorType[] = [
@@ -21,16 +23,12 @@ export async function GET(req: NextRequest) {
     const slug = searchParams.get('slug');
     if (!slug) return NextResponse.json({ error: 'slug is required' }, { status: 400 });
 
-    const admin = supabaseAdmin();
+    // STAFF-ONLY ownership check
+    const guard = await requireOwnedArchiveBySlug(slug);
+    if (guard.response) return guard.response;
+    const archive = guard.archive;
 
-    const { data: archive, error: aErr } = await admin
-      .from('archives')
-      .select('id')
-      .eq('share_slug', slug)
-      .single();
-    if (aErr || !archive) {
-      return NextResponse.json({ error: 'Archive not found' }, { status: 404 });
-    }
+    const admin = supabaseAdmin();
 
     const { data, error } = await admin
       .from('vendors')
@@ -77,16 +75,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name too long (max 200 chars)' }, { status: 400 });
     }
 
-    const admin = supabaseAdmin();
+    // STAFF-ONLY ownership check
+    const guard = await requireOwnedArchiveBySlug(slug);
+    if (guard.response) return guard.response;
+    const archive = guard.archive;
 
-    const { data: archive, error: aErr } = await admin
-      .from('archives')
-      .select('id')
-      .eq('share_slug', slug)
-      .single();
-    if (aErr || !archive) {
-      return NextResponse.json({ error: 'Archive not found' }, { status: 404 });
-    }
+    const admin = supabaseAdmin();
 
     const { data, error } = await admin
       .from('vendors')
@@ -116,6 +110,10 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
+    // STAFF-ONLY: verify the vendor's archive belongs to the signed-in staff's home
+    const guard = await requireOwnedChildById('vendors', id);
+    if (guard.response) return guard.response;
 
     const admin = supabaseAdmin();
     const { error } = await admin.from('vendors').delete().eq('id', id);
