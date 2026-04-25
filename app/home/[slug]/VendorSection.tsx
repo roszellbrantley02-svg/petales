@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Vendor, VendorStatus, VendorType } from '@/lib/types';
+import type { Vendor, VendorStatus, VendorType, HomeVendor } from '@/lib/types';
 import { VENDOR_TYPE_LABELS, buildVendorEmail, vendorMailtoUrl } from '@/lib/vendor-templates';
 
 const STATUS_LABELS: Record<VendorStatus, string> = {
@@ -33,6 +33,8 @@ export default function VendorSection({
   subjectDates,
   homeName = '',
 }: Props) {
+  const [homeVendors, setHomeVendors] = useState<HomeVendor[]>([]);
+  const [pickedHomeVendorId, setPickedHomeVendorId] = useState<string>('');
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -54,6 +56,12 @@ export default function VendorSection({
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    fetch('/api/home-vendors').then(r => r.ok ? r.json() : []).then((d: HomeVendor[]) => {
+      setHomeVendors(Array.isArray(d) ? d : []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadVendors();

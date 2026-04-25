@@ -118,6 +118,7 @@ export default function StaffPageClient({
         </div>
         <div className="flex items-center gap-3">
           <a href="/home" className="text-muted text-sm hover:text-ink">← All families</a>
+          <a href="/home/vendors" className="text-muted text-sm hover:text-ink">Vendors</a>
           <button onClick={signOut} className="text-muted text-sm hover:text-ink">Sign out</button>
         </div>
       </div>

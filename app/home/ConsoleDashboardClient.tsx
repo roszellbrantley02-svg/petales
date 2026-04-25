@@ -96,6 +96,7 @@ export default function ConsoleDashboardClient({
             + New family archive
           </button>
           <a href="/home/staff" className="text-muted text-sm hover:text-ink">Staff</a>
+          <a href="/home/vendors" className="text-muted text-sm hover:text-ink">Vendors</a>
           {staffName && (
             <span className="text-xs text-subtle hidden sm:inline">{staffName}</span>
           )}

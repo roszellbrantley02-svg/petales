@@ -128,9 +128,25 @@ export type VendorStatus =
   | 'completed'
   | 'cancelled';
 
+
+export interface HomeVendor {
+  id: string;
+  home_id: string;
+  vendor_type: VendorType;
+  name: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  notes: string | null;
+  is_preferred: boolean;
+  use_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Vendor {
   id: string;
   archive_id: string;
+  home_vendor_id?: string | null;
   vendor_type: VendorType;
   name: string;
   contact_email: string | null;

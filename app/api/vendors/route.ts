@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       status,
       notes,
       needed_at,
+      home_vendor_id,
     } = body;
 
     if (!slug || !vendor_type || !name) {
@@ -93,11 +94,28 @@ export async function POST(req: NextRequest) {
         status: status || 'not_contacted',
         notes: notes || null,
         needed_at: needed_at || null,
+        home_vendor_id: home_vendor_id || null,
       })
       .select()
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // If this case-vendor was created from a directory entry, bump its use_count.
+    if (home_vendor_id) {
+      const { data: hv } = await admin
+        .from('home_vendors')
+        .select('use_count')
+        .eq('id', home_vendor_id)
+        .single();
+      if (hv) {
+        await admin
+          .from('home_vendors')
+          .update({ use_count: (hv.use_count || 0) + 1 })
+          .eq('id', home_vendor_id);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
