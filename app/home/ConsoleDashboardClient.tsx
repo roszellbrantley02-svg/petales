@@ -11,8 +11,12 @@ interface ArchiveSummary extends Archive {
 
 export default function ConsoleDashboardClient({
   initialArchives,
+  homeName,
+  staffName,
 }: {
   initialArchives: ArchiveSummary[];
+  homeName?: string;
+  staffName?: string;
 }) {
   const [archives, setArchives] = useState<ArchiveSummary[]>(initialArchives);
   const [modalOpen, setModalOpen] = useState(false);
@@ -21,6 +25,12 @@ export default function ConsoleDashboardClient({
   const [newPhoto, setNewPhoto] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const router = useRouter();
+
+  async function signOut() {
+    if (!confirm('Sign out?')) return;
+    await fetch('/api/auth/signout', { method: 'POST' });
+    window.location.href = '/signin';
+  }
 
   async function createArchive() {
     if (!newName.trim()) {
@@ -68,21 +78,30 @@ export default function ConsoleDashboardClient({
   return (
     <div className="min-h-screen bg-[#f5f3ed]">
       {/* Top bar */}
-      <div className="bg-white border-b border-line px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-line px-6 py-4 flex justify-between items-center flex-wrap gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <span className="serif text-xl font-medium">Petales</span>
-          <span className="text-xs font-medium uppercase tracking-wider bg-tag text-muted px-2 py-1 rounded-full">
-            Funeral Home Console
-          </span>
+          {homeName && (
+            <>
+              <span className="text-subtle">·</span>
+              <span className="text-sm font-medium text-ink truncate">{homeName}</span>
+            </>
+          )}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
             className="bg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-sage-dark transition-colors"
           >
             + New family archive
           </button>
-          <a href="/" className="text-muted text-sm hover:text-ink">About</a>
+          <a href="/home/staff" className="text-muted text-sm hover:text-ink">Staff</a>
+          {staffName && (
+            <span className="text-xs text-subtle hidden sm:inline">{staffName}</span>
+          )}
+          <button onClick={signOut} className="text-muted text-sm hover:text-ink">
+            Sign out
+          </button>
         </div>
       </div>
 

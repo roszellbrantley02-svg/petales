@@ -3,11 +3,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getAuthedStaff } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
+    const authed = await getAuthedStaff();
+    if (!authed) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
     const body = await req.json();
-    const { subject_name, subject_dates, cover_photo_url, home_id, family_contact_email } = body;
+    const { subject_name, subject_dates, cover_photo_url, family_contact_email } = body;
 
     if (!subject_name) {
       return NextResponse.json({ error: 'subject_name is required' }, { status: 400 });
@@ -20,7 +26,7 @@ export async function POST(req: NextRequest) {
         subject_name,
         subject_dates: subject_dates || null,
         cover_photo_url: cover_photo_url || null,
-        home_id: home_id || null,
+        home_id: authed.home.id,  // Always scope to the signed-in staff's home
         family_contact_email: family_contact_email || null,
       })
       .select()
@@ -34,16 +40,20 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const home_id = searchParams.get('home_id');
+    const authed = await getAuthedStaff();
+    if (!authed) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
 
     const admin = supabaseAdmin();
-    let query = admin.from('archives').select('*').order('updated_at', { ascending: false });
-    if (home_id) query = query.eq('home_id', home_id);
+    const { data, error } = await admin
+      .from('archives')
+      .select('*')
+      .eq('home_id', authed.home.id)
+      .order('updated_at', { ascending: false });
 
-    const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   } catch (err: unknown) {

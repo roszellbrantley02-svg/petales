@@ -1,0 +1,10 @@
+// POST /api/auth/signout — clears the session and redirects to /signin
+
+import { NextResponse } from 'next/server';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
+
+export async function POST() {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  return NextResponse.redirect(new URL('/signin', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'), { status: 303 });
+}
