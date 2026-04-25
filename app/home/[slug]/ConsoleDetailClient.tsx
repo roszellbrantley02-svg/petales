@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { Archive, Memory } from '@/lib/types';
 import VendorSection from './VendorSection';
+import BroadcastSection from './BroadcastSection';
+import DonationSettings from './DonationSettings';
 
 type GenerateTool =
   | 'obit_traditional'
@@ -249,6 +251,17 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
           archiveSlug={archive.share_slug}
           subjectName={archive.subject_name}
           subjectDates={archive.subject_dates}
+        />
+
+        {/* Family announcement broadcaster */}
+        <BroadcastSection archiveSlug={archive.share_slug} />
+
+        {/* Donation link (in lieu of flowers) */}
+        <DonationSettings
+          archiveSlug={archive.share_slug}
+          initialCharityName={archive.donation_charity_name}
+          initialUrl={archive.donation_url}
+          initialNote={archive.donation_note}
         />
 
         {/* Generate */}

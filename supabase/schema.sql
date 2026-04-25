@@ -38,6 +38,9 @@ create table if not exists archives (
   cover_photo_url text,
   share_slug text unique not null default substring(replace(uuid_generate_v4()::text, '-', '') from 1 for 12),
   family_contact_email text,
+  donation_charity_name text,
+  donation_url text,
+  donation_note text,
   status text check (status in ('active','completed','archived')) default 'active',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -120,6 +123,54 @@ create trigger vendors_updated_at
   before update on vendors
   for each row execute function touch_vendor_updated_at();
 
+-- ——— Announcements (family broadcaster) ———
+create table if not exists announcements (
+  id uuid primary key default uuid_generate_v4(),
+  archive_id uuid references archives(id) on delete cascade,
+  subject text not null,
+  body text not null,
+  status text check (status in ('draft','sending','sent','failed')) default 'draft',
+  recipient_count int default 0,
+  delivered_count int default 0,
+  failed_count int default 0,
+  sent_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_announcements_archive on announcements(archive_id, created_at desc);
+
+create table if not exists announcement_deliveries (
+  id uuid primary key default uuid_generate_v4(),
+  announcement_id uuid references announcements(id) on delete cascade,
+  recipient_email text not null,
+  recipient_name text,
+  delivery_status text check (delivery_status in ('pending','sent','failed','bounced')) default 'pending',
+  resend_message_id text,
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_deliveries_announcement on announcement_deliveries(announcement_id);
+create index if not exists idx_deliveries_status on announcement_deliveries(delivery_status);
+
+-- ——— Marketplace clicks ———
+create table if not exists marketplace_clicks (
+  id uuid primary key default uuid_generate_v4(),
+  archive_id uuid references archives(id) on delete cascade,
+  item_id text not null,
+  category text,
+  vendor text,
+  destination_url text,
+  referrer text,
+  user_agent text,
+  ip_hash text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_marketplace_clicks_archive on marketplace_clicks(archive_id, created_at desc);
+create index if not exists idx_marketplace_clicks_item on marketplace_clicks(item_id);
+
 -- ——— Audit log ———
 create table if not exists audit_log (
   id uuid primary key default uuid_generate_v4(),
@@ -171,11 +222,32 @@ alter table archives enable row level security;
 alter table memories enable row level security;
 alter table generations enable row level security;
 alter table vendors enable row level security;
+alter table announcements enable row level security;
+alter table announcement_deliveries enable row level security;
 
 create policy "Staff can manage their archive's vendors" on vendors
   for all using (
     archive_id in (
       select a.id from archives a
+      join staff s on s.home_id = a.home_id
+      where s.auth_user_id = auth.uid()
+    )
+  );
+
+create policy "Staff can manage their archive's announcements" on announcements
+  for all using (
+    archive_id in (
+      select a.id from archives a
+      join staff s on s.home_id = a.home_id
+      where s.auth_user_id = auth.uid()
+    )
+  );
+
+create policy "Staff can view their archive's deliveries" on announcement_deliveries
+  for select using (
+    announcement_id in (
+      select an.id from announcements an
+      join archives a on a.id = an.archive_id
       join staff s on s.home_id = a.home_id
       where s.auth_user_id = auth.uid()
     )

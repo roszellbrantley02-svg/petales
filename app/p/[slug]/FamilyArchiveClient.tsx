@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Archive, Memory, MemoryType } from '@/lib/types';
 import { LIMITS, fileMaxFor, allowedTypesFor, bytesToReadable } from '@/lib/limits';
+import HonorSection from './HonorSection';
 
 interface Props {
   archive: Archive;
@@ -14,6 +15,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   const [formOpen, setFormOpen] = useState(false);
   const [formType, setFormType] = useState<MemoryType>('text');
   const [authorName, setAuthorName] = useState('');
+  const [authorEmail, setAuthorEmail] = useState('');
   const [textContent, setTextContent] = useState('');
   const [caption, setCaption] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -32,6 +34,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   function closeForm() {
     setFormOpen(false);
     setAuthorName('');
+    setAuthorEmail('');
     setTextContent('');
     setCaption('');
     setMediaFile(null);
@@ -104,6 +107,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
         body: JSON.stringify({
           share_slug: archive.share_slug,
           author_name: authorName.trim(),
+          author_email: authorEmail.trim() || null,
           memory_type: formType,
           text_content: formType === 'text' ? textContent : null,
           media_url: mediaUrl,
@@ -180,15 +184,29 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
             {formType === 'video' && 'Share a video'}
           </div>
 
-          <div className="mb-4">
-            <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-2">Your name</label>
-            <input
-              type="text"
-              value={authorName}
-              onChange={e => setAuthorName(e.target.value)}
-              placeholder="So we know who shared this"
-              className="w-full border border-line bg-cream rounded-lg px-3.5 py-3 focus:border-accent focus:bg-white focus:outline-none"
-            />
+          <div className="grid md:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-2">Your name</label>
+              <input
+                type="text"
+                value={authorName}
+                onChange={e => setAuthorName(e.target.value)}
+                placeholder="So we know who shared this"
+                className="w-full border border-line bg-cream rounded-lg px-3.5 py-3 focus:border-accent focus:bg-white focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-2">
+                Email <span className="text-subtle normal-case font-normal">(optional)</span>
+              </label>
+              <input
+                type="email"
+                value={authorEmail}
+                onChange={e => setAuthorEmail(e.target.value)}
+                placeholder="So the family can reach you"
+                className="w-full border border-line bg-cream rounded-lg px-3.5 py-3 focus:border-accent focus:bg-white focus:outline-none"
+              />
+            </div>
           </div>
 
           {formType === 'text' && (
@@ -278,6 +296,14 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
           ))}
         </div>
       )}
+
+      <HonorSection
+        archiveSlug={archive.share_slug}
+        subjectName={archive.subject_name}
+        donationCharityName={archive.donation_charity_name}
+        donationUrl={archive.donation_url}
+        donationNote={archive.donation_note}
+      />
 
       <footer className="mt-20 pt-10 border-t border-line text-center text-xs text-subtle">
         <p className="serif italic text-base text-muted mb-2">A quiet place to gather what matters.</p>

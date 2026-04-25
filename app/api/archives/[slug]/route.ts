@@ -44,7 +44,10 @@ export async function PATCH(
   try {
     const { slug } = await params;
     const body = await req.json();
-    const allowed = ['subject_name', 'subject_dates', 'cover_photo_url', 'status', 'family_contact_email'];
+    const allowed = [
+      'subject_name', 'subject_dates', 'cover_photo_url', 'status',
+      'family_contact_email', 'donation_charity_name', 'donation_url', 'donation_note',
+    ];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (body[key] !== undefined) updates[key] = body[key];

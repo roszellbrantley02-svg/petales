@@ -36,6 +36,17 @@ export const LIMITS = {
   // This is your insurance against runaway costs from bugs, abuse, or compromise.
   GENERATIONS_PER_MONTH_HARD_CAP: 500,
 
+  // ——— Email broadcaster caps (cost & abuse control) ———
+  ANNOUNCEMENT_SUBJECT_MAX_CHARS: 200,
+  ANNOUNCEMENT_BODY_MAX_CHARS: 5_000,
+  RECIPIENTS_PER_ANNOUNCEMENT_MAX: 100,
+  ANNOUNCEMENTS_PER_ARCHIVE_PER_DAY: 5,
+  ANNOUNCEMENTS_PER_DAY_GLOBAL: 50,
+
+  // Hard cap — stops Resend bill blowup completely
+  ANNOUNCEMENTS_PER_MONTH_HARD_CAP: 200,
+  EMAILS_PER_MONTH_HARD_CAP: 2_000,  // Resend free tier is 3,000/mo
+
   // ——— Allowed MIME types ———
   ALLOWED_PHOTO_TYPES: [
     'image/jpeg',

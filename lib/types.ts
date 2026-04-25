@@ -25,6 +25,9 @@ export interface Archive {
   cover_photo_url: string | null;
   share_slug: string;
   family_contact_email: string | null;
+  donation_charity_name: string | null;
+  donation_url: string | null;
+  donation_note: string | null;
   status: 'active' | 'completed' | 'archived';
   created_at: string;
   updated_at: string;
@@ -112,4 +115,37 @@ export interface Vendor {
   needed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type AnnouncementStatus = 'draft' | 'sending' | 'sent' | 'failed';
+export type DeliveryStatus = 'pending' | 'sent' | 'failed' | 'bounced';
+
+export interface Announcement {
+  id: string;
+  archive_id: string;
+  subject: string;
+  body: string;
+  status: AnnouncementStatus;
+  recipient_count: number;
+  delivered_count: number;
+  failed_count: number;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface AnnouncementDelivery {
+  id: string;
+  announcement_id: string;
+  recipient_email: string;
+  recipient_name: string | null;
+  delivery_status: DeliveryStatus;
+  resend_message_id: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface AnnouncementRecipient {
+  email: string;
+  name: string | null;
 }
