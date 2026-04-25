@@ -86,7 +86,22 @@ export default function LiveBriefPanel({ archive }: Props) {
         }
         const json: BriefData = await res.json();
         if (cancelled) return;
-        setData(json);
+
+        // Bug fix: preserve existing brief if the new fetch happens to return null
+        // (timing issue: a regenerate-in-progress hasn't committed to DB yet, or the
+        // polling fires while another caller is mid-write). Otherwise the brief
+        // visibly disappears and reappears, which feels broken.
+        setData((prev) => {
+          if (prev?.brief && !json.brief) {
+            return {
+              ...json,
+              brief: prev.brief,
+              generated_at: prev.generated_at,
+              memory_count_at_generation: prev.memory_count_at_generation,
+            };
+          }
+          return json;
+        });
 
         // First load only: if the brief is stale, kick off a regenerate in the background
         if (!autoRefreshKickedOff.current && json.is_stale && (json.current_memory_count > 0)) {

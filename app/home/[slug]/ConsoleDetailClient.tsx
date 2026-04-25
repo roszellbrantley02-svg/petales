@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LiveBriefPanel from './LiveBriefPanel';
 import ArchiveSettingsPanel from './ArchiveSettingsPanel';
 import type { Archive, Memory } from '@/lib/types';
@@ -106,6 +106,8 @@ interface Props {
 export default function ConsoleDetailClient({ archive, memories }: Props) {
   const [output, setOutput] = useState<string>('');
   const [outputTitle, setOutputTitle] = useState<string>('');
+  const [cachedGenerations, setCachedGenerations] = useState<Record<string, { content: string; generated_at: string }>>({});
+  const [activeToolKey, setActiveToolKey] = useState<string>('');
   const [generating, setGenerating] = useState<boolean>(false);
   const [copyBanner, setCopyBanner] = useState<boolean>(false);
   const [tradition, setTradition] = useState<Tradition>('none');
@@ -121,9 +123,18 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
     ? `${window.location.origin}/p/${archive.share_slug}`
     : `/p/${archive.share_slug}`;
 
-  async function generate(tool: GenerateTool) {
-    setGenerating(true);
-    setOutput('');
+  useEffect(() => {
+    fetch(`/api/generations?slug=${archive.share_slug}`)
+      .then((r) => (r.ok ? r.json() : { generations: {} }))
+      .then((d) => {
+        if (d?.generations) setCachedGenerations(d.generations);
+      })
+      .catch(() => {});
+  }, [archive.share_slug]);
+
+  async function generate(tool: GenerateTool, force = false) {
+    // Build a tool-key that includes tradition/language so caching is per-variant
+    const toolKey = `${tool}|${tradition || 'none'}|${language || 'en'}`;
 
     // Build a richer title that reflects tradition + language
     const traditionLabel = tradition !== 'none'
@@ -137,6 +148,19 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
       ? `${TOOL_META[tool].title} (${modifiers})`
       : TOOL_META[tool].title;
     setOutputTitle(fullTitle);
+    setActiveToolKey(toolKey);
+
+    // CACHE-FIRST: if we already have this tool's content in cache (from a
+    // previous click or from the initial DB fetch), show it instantly without
+    // calling Claude. Only regenerate when the director explicitly asks.
+    if (!force && cachedGenerations[tool]) {
+      setOutput(cachedGenerations[tool].content);
+      setGenerating(false);
+      return;
+    }
+
+    setGenerating(true);
+    setOutput('');
 
     try {
       const res = await fetch('/api/generate', {
@@ -155,6 +179,11 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
       }
       const data = await res.json();
       setOutput(data.content);
+      // Save to cache so subsequent clicks don't re-call Claude
+      setCachedGenerations((prev) => ({
+        ...prev,
+        [tool]: { content: data.content, generated_at: new Date().toISOString() },
+      }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setOutput(`Error: ${message}`);
@@ -378,7 +407,21 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
                 className="w-full min-h-[320px] border border-line rounded-lg p-5 serif text-base leading-relaxed bg-[#fefdf9] focus:border-sage focus:outline-none resize-y"
               />
             )}
-            <p className="text-xs text-subtle mt-3 italic">
+                          {!generating && activeToolKey && (
+                <button
+                  onClick={() => {
+                    // Find the tool from the toolKey
+                    const tool = activeToolKey.split('|')[0] as GenerateTool;
+                    if (confirm('Regenerate this with Claude? Each regeneration uses AI credits.')) {
+                      generate(tool, true);
+                    }
+                  }}
+                  className="text-xs uppercase tracking-wider text-muted hover:text-ink mb-3"
+                >
+                  ↻ Regenerate
+                </button>
+              )}
+<p className="text-xs text-subtle mt-3 italic">
               Drafted by Claude from the family&apos;s own contributions. Always review and edit before finalizing.
             </p>
           </div>
