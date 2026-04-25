@@ -27,7 +27,7 @@ export default function StaffPageClient({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [invitePassword, setInvitePassword] = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState('');
   const [inviteRole, setInviteRole] = useState<'staff' | 'director' | 'admin'>('staff');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -40,12 +40,6 @@ export default function StaffPageClient({
     setSubmitting(true);
     setError('');
 
-    if (invitePassword.length < 8) {
-      setError('Password must be at least 8 characters.');
-      setSubmitting(false);
-      return;
-    }
-
     try {
       const res = await fetch('/api/auth/invite-staff', {
         method: 'POST',
@@ -53,7 +47,6 @@ export default function StaffPageClient({
         body: JSON.stringify({
           name: inviteName.trim(),
           email: inviteEmail.trim(),
-          password: invitePassword,
           role: inviteRole,
         }),
       });
@@ -65,11 +58,15 @@ export default function StaffPageClient({
 
       const newStaff = await res.json();
       setStaff([...staff, newStaff]);
-      setInviteOpen(false);
       setInviteName('');
       setInviteEmail('');
-      setInvitePassword('');
       setInviteRole('staff');
+      setInviteSuccess(newStaff.message || newStaff.warning || `Invitation email sent to ${inviteEmail.trim()}.`);
+      // Keep the modal open briefly so the admin sees confirmation, then close it.
+      setTimeout(() => {
+        setInviteOpen(false);
+        setInviteSuccess('');
+      }, 4000);
       router.refresh();
     } catch (err: unknown) {
       const m = err instanceof Error ? err.message : 'Unknown error';
@@ -183,9 +180,9 @@ export default function StaffPageClient({
             className="bg-white rounded-2xl p-7 max-w-md w-full shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="serif text-xl font-medium mb-2">Add staff member</h2>
+            <h2 className="serif text-xl font-medium mb-2">Invite a staff member</h2>
             <p className="text-muted text-sm mb-5">
-              They&rsquo;ll be able to sign in with the email and password you set here. Give them the credentials directly.
+              They&rsquo;ll receive an email with a link to set their own password and sign in. They don&rsquo;t need anything from you.
             </p>
 
             <form onSubmit={inviteStaff}>
@@ -212,21 +209,6 @@ export default function StaffPageClient({
                 />
               </div>
 
-              <div className="mb-3">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1.5">
-                  Initial password <span className="font-normal normal-case text-subtle">(8+ chars)</span>
-                </label>
-                <input
-                  type="text"
-                  value={invitePassword}
-                  onChange={e => setInvitePassword(e.target.value)}
-                  placeholder="Tell them in person or via secure channel"
-                  required
-                  minLength={8}
-                  className="w-full border border-line bg-cream rounded-lg px-3 py-2 text-sm focus:border-sage focus:bg-white focus:outline-none"
-                />
-              </div>
-
               <div className="mb-5">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1.5">Role</label>
                 <select
@@ -246,6 +228,12 @@ export default function StaffPageClient({
                 </div>
               )}
 
+              {inviteSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg p-3 mb-4">
+                  {inviteSuccess}
+                </div>
+              )}
+
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -260,7 +248,7 @@ export default function StaffPageClient({
                   disabled={submitting}
                   className="bg-sage text-white px-5 py-2 rounded-lg font-medium text-sm hover:bg-sage-dark disabled:bg-subtle disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Adding…' : 'Add staff'}
+                  {submitting ? 'Sending invitation…' : 'Send invitation'}
                 </button>
               </div>
             </form>
