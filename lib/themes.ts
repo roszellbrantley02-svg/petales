@@ -9,6 +9,8 @@
 // All themes share the same variable names so the page works regardless.
 // ——————————————————————————————————————————————————
 
+import type { CSSProperties } from 'react';
+
 export type ThemeId =
   | 'cream'      // default — warm cream + bronze
   | 'garden'     // soft pinks + mauve
@@ -156,7 +158,7 @@ export function themeToCssVars(themeId: string | null | undefined): string {
 }
 
 // Build a React inline style object
-export function themeToStyle(themeId: string | null | undefined): React.CSSProperties {
+export function themeToStyle(themeId: string | null | undefined): CSSProperties {
   const t = getTheme(themeId);
   return {
     ['--bg' as string]: t.bg,
@@ -170,5 +172,5 @@ export function themeToStyle(themeId: string | null | undefined): React.CSSPrope
     ['--warm' as string]: t.warm,
     backgroundColor: t.bg,
     color: t.ink,
-  };
+  } as CSSProperties;
 }
