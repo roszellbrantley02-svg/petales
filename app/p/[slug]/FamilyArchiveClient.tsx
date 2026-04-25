@@ -324,6 +324,18 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
       <footer className="mt-20 pt-10 border-t border-line text-center text-xs text-subtle">
         <p className="serif italic text-base text-muted mb-2">A quiet place to gather what matters.</p>
         <p>Kept for generations.</p>
+        <p className="mt-6">
+          <a
+            href={`/api/archives/${archive.share_slug}/export`}
+            className="serif italic text-muted hover:text-ink underline underline-offset-4 decoration-line hover:decoration-ink"
+          >
+            Download a copy of this archive
+          </a>
+        </p>
+        <p className="text-[11px] text-subtle mt-2 max-w-md mx-auto leading-relaxed">
+          Your permanent copy &mdash; photos, voice notes, videos, and an offline-readable webpage.
+          Keep it on a backup drive, share it with family, save it forever.
+        </p>
       </footer>
     </div>
 

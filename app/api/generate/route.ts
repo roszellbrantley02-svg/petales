@@ -40,6 +40,8 @@ const VALID_TOOLS: GenerateTool[] = [
   'thank_yous',
   'acknowledgment_letter',
   'grief_resources',
+  // Internal staff tools
+  'director_brief',
 ];
 
 export async function POST(req: NextRequest) {

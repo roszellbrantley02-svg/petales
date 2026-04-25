@@ -19,7 +19,8 @@ type GenerateTool =
   | 'reading_music_suggestions'
   | 'thank_yous'
   | 'acknowledgment_letter'
-  | 'grief_resources';
+  | 'grief_resources'
+  | 'director_brief';
 
 type Tradition =
   | 'none'
@@ -68,10 +69,15 @@ const TOOL_META: Record<GenerateTool, { title: string; sub: string }> = {
   thank_yous: { title: 'Thank-You Notes', sub: 'Personalized per contributor' },
   acknowledgment_letter: { title: 'Acknowledgment Letter', sub: 'For charities receiving donations' },
   grief_resources: { title: 'Grief Support Resources', sub: 'Curated list for the family' },
+  director_brief: { title: 'Pre-Meeting Brief', sub: 'One-page summary the director reads before the arrangement conference' },
 };
 
 // Grouped for the UI — same data, organized for scanability
 const TOOL_GROUPS: { label: string; tools: GenerateTool[] }[] = [
+  {
+    label: 'Pre-Meeting',
+    tools: ['director_brief'],
+  },
   {
     label: 'Obituary',
     tools: ['obit_traditional', 'obit_celebratory', 'obit_personal'],

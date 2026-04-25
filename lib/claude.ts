@@ -37,7 +37,9 @@ export type GenerateTool =
   // After-service
   | 'thank_yous'
   | 'acknowledgment_letter'
-  | 'grief_resources';
+  | 'grief_resources'
+  // Internal staff tools
+  | 'director_brief';
 
 export type Tradition =
   | 'none'
@@ -192,6 +194,34 @@ const TOOL_INSTRUCTIONS: Record<GenerateTool, string> = {
 
   grief_resources:
     'Compile a list of GRIEF SUPPORT RESOURCES suitable for the family. Mix of national and reputable options: 3 national grief organizations with brief descriptions and URLs, 2 recommended books on loss, 1 online community, and 1 line about local resources (with a placeholder noting the funeral home should add their region\'s specifics). Format as a clean, scannable list. Tone: caring but practical.',
+
+  director_brief:
+    `Write a PRE-MEETING DIRECTOR BRIEF — a one-page summary the funeral director will read in the parking lot before sitting down with the family for the arrangement conference. The goal: the director walks into the room already knowing the deceased instead of meeting them as a stranger.
+
+Format the output EXACTLY as follows, in this order, with these exact headings:
+
+WHO THEY WERE
+[2-3 sentences synthesizing who the deceased was as a person, drawn entirely from what contributors actually said. Plainspoken, specific, not generic. If little has been contributed, say "Not yet known — the family hasn\'t contributed much yet."]
+
+KEY CONTRIBUTORS
+- [Contributor\'s name] ([their relationship if mentioned, otherwise omit]): [one short line about what they contributed]
+... (list every distinct contributor)
+
+RECURRING THEMES
+- [Things multiple contributors mentioned, 3-5 bullets max — what kept coming up]
+(If only one contributor or only one theme, write what you found honestly, even if it\'s one bullet.)
+
+NOTABLE QUOTES
+"[Exact words a contributor wrote or said]" — [contributor name]
+... (3-5 quotes max, ONLY direct words contributors actually contributed — never invent. If contributors only sent photos or short text without quotable lines, write "No direct quotes contributed yet.")
+
+WHAT THE FAMILY SEEMS TO WANT
+[The tone of the contributions — celebratory or restrained, religious or secular, traditional or unconventional. Any service preferences explicitly mentioned. Any tradition cues. 2-4 sentences.]
+
+WORTH ASKING IN THE CONFERENCE
+- [3-5 specific suggested questions, based on what\'s been said and what\'s notably MISSING from what\'s been said. Practical and human — questions the director would actually want to ask, not generic ones.]
+
+Total length: 400-600 words. Plainspoken. No filler. NEVER invent or embellish. If a section has no material, say "Not yet known" rather than making something up. The whole point is that the director walks in informed by the family\'s real voice, not by AI guesses.`,
 };
 
 // ——————————————————————————————————————————————————
