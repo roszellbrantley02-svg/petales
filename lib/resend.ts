@@ -238,3 +238,91 @@ export async function sendStaffInvite(data: StaffInviteEmailData) {
     text: renderStaffInviteText(data),
   });
 }
+
+// ——————————————————————————————————————————————————
+// Password reset email — sent when a staff member uses /forgot-password
+// ——————————————————————————————————————————————————
+
+export interface PasswordResetEmailData {
+  recipientName: string | null;
+  recipientEmail: string;
+  homeName: string;
+  resetLink: string;
+}
+
+export function renderPasswordResetHtml(data: PasswordResetEmailData): string {
+  const greeting = data.recipientName ? `Hi ${escapeHtml(data.recipientName)},` : 'Hello,';
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reset your Petales password</title></head>
+<body style="margin: 0; padding: 0; background: #faf8f4; font-family: Georgia, 'Times New Roman', serif; color: #2a2623;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #faf8f4; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background: #ffffff; border-radius: 12px; padding: 44px 36px;">
+          <tr>
+            <td>
+              <div style="font-family: Georgia, serif; font-size: 24px; font-weight: 500; color: #2a2623; letter-spacing: -0.01em;">Petales</div>
+              <hr style="border: none; border-top: 1px solid #e8e2d6; margin: 28px 0;">
+
+              <p style="margin: 0 0 16px; line-height: 1.65; font-size: 16px;">${greeting}</p>
+
+              <p style="margin: 0 0 24px; line-height: 1.65; font-size: 16px;">
+                Someone (probably you) asked to reset the password for your Petales account at <strong>${escapeHtml(data.homeName)}</strong>. Click below to set a new password.
+              </p>
+
+              <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 28px;">
+                <tr>
+                  <td align="center" style="background: #2a2623; border-radius: 8px;">
+                    <a href="${escapeHtml(data.resetLink)}" style="display: inline-block; padding: 14px 32px; font-family: -apple-system, system-ui, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none;">
+                      Reset your password &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 16px; line-height: 1.55; font-size: 13px; color: #6b6258;">
+                This link is good for 24 hours.
+              </p>
+
+              <hr style="border: none; border-top: 1px solid #e8e2d6; margin: 28px 0;">
+
+              <p style="margin: 0; line-height: 1.55; font-size: 12px; color: #a89e92; font-style: italic;">
+                If you didn&rsquo;t request this, ignore this email. Your password won&rsquo;t change unless you click the button above.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function renderPasswordResetText(data: PasswordResetEmailData): string {
+  const greeting = data.recipientName ? `Hi ${data.recipientName},` : 'Hello,';
+  return `${greeting}
+
+Someone (probably you) asked to reset the password for your Petales account at ${data.homeName}. Click the link below to set a new password.
+
+${data.resetLink}
+
+This link is good for 24 hours.
+
+If you didn't request this, ignore this email. Your password won't change unless you click the link.
+
+— Petales
+`;
+}
+
+export async function sendPasswordReset(data: PasswordResetEmailData) {
+  const resend = getResend();
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.recipientEmail,
+    subject: 'Reset your Petales password',
+    html: renderPasswordResetHtml(data),
+    text: renderPasswordResetText(data),
+  });
+}

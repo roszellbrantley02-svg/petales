@@ -93,6 +93,10 @@ export default function SignInClient({ next }: Props) {
             </button>
           </form>
 
+          <p className="text-sm text-muted text-center mt-4">
+            <a href="/forgot-password" className="text-muted hover:text-ink underline underline-offset-2">Forgot your password?</a>
+          </p>
+
           <p className="text-sm text-muted text-center mt-6">
             New funeral home? <a href="/signup" className="text-accent hover:text-accent-dark font-medium">Create an account</a>
           </p>

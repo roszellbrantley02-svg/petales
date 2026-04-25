@@ -24,6 +24,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
   const [caption, setCaption] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isLastWords, setIsLastWords] = useState(false);
   const [theme, setTheme] = useState<ThemeId>((archive.theme as ThemeId) || 'cream');
 
   const initial = (archive.subject_name || 'M').charAt(0).toUpperCase();
@@ -34,6 +35,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
     setTextContent('');
     setCaption('');
     setMediaFile(null);
+    setIsLastWords(false);
   }
 
   function closeForm() {
@@ -43,6 +45,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
     setTextContent('');
     setCaption('');
     setMediaFile(null);
+    setIsLastWords(false);
   }
 
   async function handleSubmit() {
@@ -117,6 +120,7 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
           text_content: formType === 'text' ? textContent : null,
           media_url: mediaUrl,
           caption: caption || null,
+          is_last_words: isLastWords,
         }),
       });
 
@@ -158,23 +162,31 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
         )}
       </div>
 
-      {/* Add bar */}
+      {/* Add bar — voice-first per PHILOSOPHY.md */}
       <div className="bg-white border border-line rounded-2xl p-6 mb-10">
-        <div className="serif text-xl font-medium mb-1">Share a memory</div>
+        <div className="serif text-xl font-medium mb-1">Tell us about {archive.subject_name}</div>
         <div className="text-muted text-sm mb-5">
-          A story, a photo, a voice — anything you want to remember.
+          Voice notes carry the most. Old photos, short stories, anything that comes to mind.
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-          <button onClick={() => openForm('text')} className="border border-line bg-cream rounded-xl px-3 py-4 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
+
+        {/* Primary: voice */}
+        <button
+          onClick={() => openForm('voice')}
+          className="w-full bg-ink text-white rounded-xl px-6 py-5 mb-3 hover:bg-accent-dark transition-colors flex items-center justify-center gap-3"
+        >
+          <span className="text-xl">●</span>
+          <span className="font-medium text-base">Share a voice memory</span>
+        </button>
+
+        {/* Secondary actions */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <button onClick={() => openForm('text')} className="border border-line bg-cream rounded-xl px-3 py-3 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
             Write
           </button>
-          <button onClick={() => openForm('photo')} className="border border-line bg-cream rounded-xl px-3 py-4 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
+          <button onClick={() => openForm('photo')} className="border border-line bg-cream rounded-xl px-3 py-3 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
             Photo
           </button>
-          <button onClick={() => openForm('voice')} className="border border-line bg-cream rounded-xl px-3 py-4 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
-            Voice
-          </button>
-          <button onClick={() => openForm('video')} className="border border-line bg-cream rounded-xl px-3 py-4 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
+          <button onClick={() => openForm('video')} className="border border-line bg-cream rounded-xl px-3 py-3 font-medium text-sm hover:bg-warm hover:border-accent transition-colors">
             Video
           </button>
         </div>
@@ -266,6 +278,23 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
             </div>
           )}
 
+          <div className="mb-5 bg-warm/40 border border-line rounded-lg p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isLastWords}
+                onChange={e => setIsLastWords(e.target.checked)}
+                className="mt-1 w-4 h-4 cursor-pointer"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-sm">This is something they actually said</div>
+                <div className="text-xs text-muted mt-1 leading-relaxed">
+                  Mark this if you&rsquo;re sharing real words from {archive.subject_name} — something they said, wrote, or recorded. We honor these in their own section.
+                </div>
+              </div>
+            </label>
+          </div>
+
           <div className="flex gap-3 mt-5">
             <button
               onClick={handleSubmit}
@@ -285,19 +314,47 @@ export default function FamilyArchiveClient({ archive, initialMemories }: Props)
         </div>
       )}
 
-      {/* Memories */}
+      {/* Last Words — sacred, shown first */}
+      {memories.some(m => m.is_last_words) && (
+        <>
+          <div className="mb-5">
+            <h2 className="serif text-2xl font-medium flex items-baseline gap-3">
+              <span>Last words</span>
+              <span className="text-sm text-muted font-sans font-normal">
+                ({memories.filter(m => m.is_last_words).length})
+              </span>
+            </h2>
+            <p className="serif italic text-sm text-muted mt-1">
+              Their own words, kept by the people who heard them.
+            </p>
+          </div>
+          <div className="space-y-4 mb-12">
+            {memories.filter(m => m.is_last_words).map(m => (
+              <div key={m.id} className="border-l-4 border-accent pl-4">
+                <MemoryCard memory={m} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Memories — everything else */}
       <h2 className="serif text-2xl font-medium mb-5 flex items-baseline gap-3">
         <span>Memories shared</span>
-        {memories.length > 0 && <span className="text-sm text-muted font-sans font-normal">({memories.length})</span>}
+        {memories.filter(m => !m.is_last_words).length > 0 && (
+          <span className="text-sm text-muted font-sans font-normal">
+            ({memories.filter(m => !m.is_last_words).length})
+          </span>
+        )}
       </h2>
 
-      {memories.length === 0 ? (
+      {memories.filter(m => !m.is_last_words).length === 0 ? (
         <div className="text-center py-12 text-muted serif italic text-lg">
-          No memories yet.<br />Be the first to share one.
+          {memories.length === 0 ? <>No memories yet.<br />Be the first to share one.</> : 'No other memories yet.'}
         </div>
       ) : (
         <div className="space-y-4">
-          {memories.map(m => (
+          {memories.filter(m => !m.is_last_words).map(m => (
             <MemoryCard key={m.id} memory={m} />
           ))}
         </div>

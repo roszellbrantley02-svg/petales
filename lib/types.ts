@@ -14,6 +14,7 @@ export interface Memory {
   media_url?: string | null;
   duration_seconds?: number | null;
   caption?: string | null;
+  is_last_words?: boolean;
   created_at: string;
 }
 

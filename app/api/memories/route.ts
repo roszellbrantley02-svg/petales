@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       media_url,
       caption,
       duration_seconds,
+      is_last_words,
     } = body;
 
     // ——— Field presence ———
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
         media_url: media_url || null,
         caption: caption ? String(caption).trim() : null,
         duration_seconds: duration_seconds || null,
+        is_last_words: !!is_last_words,
       })
       .select()
       .single();
