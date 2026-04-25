@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { LIMITS } from '@/lib/limits';
-import { resend, FROM_EMAIL, renderAnnouncementHtml, renderAnnouncementText } from '@/lib/resend';
+import { getResend, FROM_EMAIL, renderAnnouncementHtml, renderAnnouncementText } from '@/lib/resend';
 import type { AnnouncementRecipient } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -221,6 +221,20 @@ export async function POST(req: NextRequest) {
     // ——— Send via Resend ———
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://petales.canopytrove.com';
     const archiveUrl = `${appUrl}/p/${slug}`;
+
+    // Get the Resend client (will throw a friendly error if no API key)
+    let resend;
+    try {
+      resend = getResend();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Resend not configured';
+      // Mark the announcement as failed so the UI shows it
+      await admin
+        .from('announcements')
+        .update({ status: 'failed', failed_count: validatedRecipients.length })
+        .eq('id', announcement.id);
+      return NextResponse.json({ error: message, code: 'RESEND_NOT_CONFIGURED' }, { status: 503 });
+    }
 
     let delivered = 0;
     let failed = 0;

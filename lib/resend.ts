@@ -8,15 +8,24 @@
 
 import { Resend } from 'resend';
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+// Lazy initialization — only construct the Resend client when something
+// actually sends an email. This lets the app build and run without the API key,
+// and only fails if/when the broadcaster is actually used.
+let _resend: Resend | null = null;
 
-if (!RESEND_API_KEY) {
-  console.warn('RESEND_API_KEY is not set — announcement broadcasting will fail.');
+export function getResend(): Resend {
+  if (_resend) return _resend;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error(
+      'RESEND_API_KEY is not set. Add it to your environment to enable announcement broadcasting.'
+    );
+  }
+  _resend = new Resend(key);
+  return _resend;
 }
 
-export const resend = new Resend(RESEND_API_KEY);
-export const FROM_EMAIL = RESEND_FROM_EMAIL;
+export const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
 // ——————————————————————————————————————————————————
 // HTML email template — Petales-branded, warm and quiet
