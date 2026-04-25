@@ -3,15 +3,56 @@
 import { useState } from 'react';
 import type { Archive, Memory } from '@/lib/types';
 
-type GenerateTool = 'obit_traditional' | 'obit_celebratory' | 'obit_personal' | 'eulogy' | 'thank_yous';
+type GenerateTool =
+  | 'obit_traditional'
+  | 'obit_celebratory'
+  | 'obit_personal'
+  | 'eulogy'
+  | 'death_notice'
+  | 'memorial_card'
+  | 'order_of_service'
+  | 'memorial_program'
+  | 'service_timeline'
+  | 'reading_music_suggestions'
+  | 'thank_yous'
+  | 'acknowledgment_letter'
+  | 'grief_resources';
 
 const TOOL_META: Record<GenerateTool, { title: string; sub: string }> = {
   obit_traditional: { title: 'Obituary — Traditional', sub: 'For newspapers and formal printing' },
   obit_celebratory: { title: 'Obituary — Celebratory', sub: 'Warmer tone, for memorial websites' },
   obit_personal: { title: 'Obituary — Personal', sub: 'Intimate, for the funeral program' },
   eulogy: { title: 'Eulogy Draft', sub: 'First-person, for the speaker' },
+  death_notice: { title: 'Death Notice', sub: 'Short version for paid newspaper notices' },
+  memorial_card: { title: 'Memorial Card', sub: 'Small printed card handed out at the service' },
+  order_of_service: { title: 'Order of Service', sub: 'Schedule printed inside the program' },
+  memorial_program: { title: 'Memorial Program (full)', sub: 'Complete printable program text' },
+  service_timeline: { title: 'Service-Day Timeline', sub: 'Minute-by-minute for the director' },
+  reading_music_suggestions: { title: 'Readings & Music', sub: 'Five of each, drawn from the archive' },
   thank_yous: { title: 'Thank-You Notes', sub: 'Personalized per contributor' },
+  acknowledgment_letter: { title: 'Acknowledgment Letter', sub: 'For charities receiving donations' },
+  grief_resources: { title: 'Grief Support Resources', sub: 'Curated list for the family' },
 };
+
+// Grouped for the UI — same data, organized for scanability
+const TOOL_GROUPS: { label: string; tools: GenerateTool[] }[] = [
+  {
+    label: 'Obituary',
+    tools: ['obit_traditional', 'obit_celebratory', 'obit_personal'],
+  },
+  {
+    label: 'Service writing',
+    tools: ['eulogy', 'death_notice', 'memorial_card', 'order_of_service', 'memorial_program', 'service_timeline'],
+  },
+  {
+    label: 'Suggestions',
+    tools: ['reading_music_suggestions'],
+  },
+  {
+    label: 'After the service',
+    tools: ['thank_yous', 'acknowledgment_letter', 'grief_resources'],
+  },
+];
 
 interface Props {
   archive: Archive;
@@ -151,17 +192,24 @@ export default function ConsoleDetailClient({ archive, memories }: Props) {
 
         {/* Generate */}
         <div className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Generate</div>
-        <div className="grid md:grid-cols-2 gap-2.5 mb-5">
-          {(Object.keys(TOOL_META) as GenerateTool[]).map(tool => (
-            <button
-              key={tool}
-              onClick={() => generate(tool)}
-              disabled={generating}
-              className="bg-white border border-line rounded-xl p-5 text-left hover:border-sage hover:bg-[#fdfcf8] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <div className="font-semibold text-sm mb-1">{TOOL_META[tool].title}</div>
-              <div className="text-muted text-xs">{TOOL_META[tool].sub}</div>
-            </button>
+        <div className="space-y-5 mb-5">
+          {TOOL_GROUPS.map(group => (
+            <div key={group.label}>
+              <div className="text-xs font-medium text-subtle mb-2 italic">{group.label}</div>
+              <div className="grid md:grid-cols-2 gap-2.5">
+                {group.tools.map(tool => (
+                  <button
+                    key={tool}
+                    onClick={() => generate(tool)}
+                    disabled={generating}
+                    className="bg-white border border-line rounded-xl p-4 text-left hover:border-sage hover:bg-[#fdfcf8] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="font-semibold text-sm mb-1">{TOOL_META[tool].title}</div>
+                    <div className="text-muted text-xs">{TOOL_META[tool].sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 

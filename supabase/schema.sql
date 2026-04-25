@@ -69,7 +69,13 @@ create table if not exists generations (
   id uuid primary key default uuid_generate_v4(),
   archive_id uuid references archives(id) on delete cascade,
   generated_by uuid references staff(id) on delete set null,
-  tool text check (tool in ('obit_traditional','obit_celebratory','obit_personal','eulogy','slideshow','thank_yous','program')) not null,
+  tool text check (tool in (
+    'obit_traditional','obit_celebratory','obit_personal',
+    'eulogy','death_notice','memorial_card','order_of_service',
+    'memorial_program','service_timeline','reading_music_suggestions',
+    'thank_yous','acknowledgment_letter','grief_resources',
+    'slideshow','program'
+  )) not null,
   content text,
   edited_content text,
   status text check (status in ('draft','edited','finalized')) default 'draft',

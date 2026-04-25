@@ -53,11 +53,28 @@ export interface Staff {
   created_at: string;
 }
 
+export type GenerationTool =
+  | 'obit_traditional'
+  | 'obit_celebratory'
+  | 'obit_personal'
+  | 'eulogy'
+  | 'death_notice'
+  | 'memorial_card'
+  | 'order_of_service'
+  | 'memorial_program'
+  | 'service_timeline'
+  | 'reading_music_suggestions'
+  | 'thank_yous'
+  | 'acknowledgment_letter'
+  | 'grief_resources'
+  | 'slideshow'
+  | 'program';
+
 export interface Generation {
   id: string;
   archive_id: string;
   generated_by: string | null;
-  tool: 'obit_traditional' | 'obit_celebratory' | 'obit_personal' | 'eulogy' | 'slideshow' | 'thank_yous' | 'program';
+  tool: GenerationTool;
   content: string | null;
   edited_content: string | null;
   status: 'draft' | 'edited' | 'finalized';

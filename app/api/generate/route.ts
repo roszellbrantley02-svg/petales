@@ -18,11 +18,23 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const VALID_TOOLS: GenerateTool[] = [
+  // Obituaries (tone)
   'obit_traditional',
   'obit_celebratory',
   'obit_personal',
+  // Service writing
   'eulogy',
+  'death_notice',
+  'memorial_card',
+  'order_of_service',
+  'memorial_program',
+  'service_timeline',
+  // Suggestions
+  'reading_music_suggestions',
+  // After-service
   'thank_yous',
+  'acknowledgment_letter',
+  'grief_resources',
 ];
 
 export async function POST(req: NextRequest) {
